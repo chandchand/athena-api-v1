@@ -1,0 +1,36 @@
+const jwt = require('jsonwebtoken');
+const { promisify } = require('util');
+const db = require('../models')
+const User = require('../models/user')(db.sequelize); 
+const ErrorHandler = require("../utils/errorHandlers")
+
+exports.isAuthenticated = async (req, res, next) => {
+  try {
+  const token = req.headers.authorization || req.cookies || req.headers["x-access-token"];
+  
+  if (!token) {
+    console.error('Token tidak ditemukan');
+    return next(new ErrorHandler('Harap login terlebih dahulu', 401));
+  }
+    const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET || 'r3blu3110923');
+    req.user = await User.findOne({where: {id: decoded.id}});
+    next();
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+    return next(new ErrorHandler('Autentikasi gagal', 401));
+  }
+};
+
+exports.authorizeRole = (...allowedRoles) => {
+  return (req, res, next) => {
+    const userRole = req.user.role;
+
+    if (!allowedRoles.includes(userRole)) {
+      return res.status(403).json({ error: 'Anda tidak diizinkan untuk mengakses ini' });
+    }
+
+    next();
+  };
+};
+
+
