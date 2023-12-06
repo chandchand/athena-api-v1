@@ -42,15 +42,13 @@ app.use(morgan('dev'));
 // Hubungkan ke basis data
 // connectDB.testConnection();
 
-db.sequelize.sync({ force: false }).then(() => {
-  console.log('Tabel berhasil dibuat atau diperbarui.');
-}).catch((err) => {
-  console.error('Gagal membuat tabel:', err);
-});
-
-sequelize.sync({ force: true, logging: console.log })
-
-
+db.sequelize.sync({ force: true, logging: (msg) => console.log(`[${db.sequelize.config.environment}] ${msg}`) })
+  .then(() => {
+    console.log('Database synced successfully.');
+  })
+  .catch((error) => {
+    console.error('Error syncing database:', error);
+  });
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());

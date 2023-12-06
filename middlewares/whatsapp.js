@@ -1,14 +1,15 @@
 // middlewares/whatsappGatewayMiddleware.js
 const axios = require('axios');
+require('dotenv').config();
 
 const sendOTP = async (phoneNumber, otpMessage) => {
   try {
-    const response = await axios.post('https://api.fonnte.com/send', {
+    const response = await axios.post(process.env.WA_URL, {
       target: phoneNumber,
       message: otpMessage,
     }, {
       headers: {
-        'Authorization': 'vwfMJ5dra0I9SYzVBbcy', // Ganti dengan token WhatsApp Gateway Anda
+        'Authorization': process.env.WA_TOKEN, // Ganti dengan token WhatsApp Gateway Anda
       },
     });
 

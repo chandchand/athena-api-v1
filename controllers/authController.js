@@ -171,7 +171,7 @@ exports.verifyOTP = catchAsyncErrors(async (req, res, next) => {
         user.status = 1;
         await user.save();  
 
-        const token = jwt.sign({ phone_number: user.phone_number, _id: user._id, role: user.role }, process.env.JWT_SECRET || 'r3blu3110923', {
+        const token = jwt.sign({ phone_number: user.phone_number, id: user.id, role: user.role }, process.env.JWT_SECRET || 'r3blu3110923', {
           expiresIn: '24h',
         });
         res.status(200).json(

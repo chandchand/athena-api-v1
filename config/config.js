@@ -7,23 +7,15 @@ module.exports = {
     database: process.env.DB_NAME,
     host: process.env.DB_HOST,
     dialect: 'postgres',
-    
+    environment: 'development', // Tambahkan properti environment
   },
   production: {
     // Konfigurasi produksi (jika diperlukan)
+    username: process.env.DB_PROD_USERNAME,
+    password: process.env.DB_PROD_PASSWORD,
+    database: process.env.DB_PROD_NAME,
+    host: process.env.DB_PROD_HOST,
+    dialect: 'postgres',
+    environment: 'production', // Tambahkan properti environment
   },
 };
-
-const { Sequelize } = require('sequelize');
-
-const sequelize = new Sequelize({
-  // Konfigurasi basis data Anda
-  dialect: 'postgres',
-  host: process.env.DB_HOST,
-  username: process.env.DB_USERNAME,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  logging: console.log,
-});
-
-global.sequelize = sequelize;

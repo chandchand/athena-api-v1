@@ -21,7 +21,7 @@ Profile.belongsTo(User, {
 
 exports.uploadAvatar = catchAsyncErrors(async(req, res, next)=>{
     
-    const user_id = req.user;
+    const user_id = req.user.id;
     try {
         let avatar = '';
 
@@ -36,7 +36,7 @@ exports.uploadAvatar = catchAsyncErrors(async(req, res, next)=>{
         const data = await Profile.update({
           avatar: avatar},
           {where: {
-            userId: user_id.id
+            userId: user_id
           }},{new: true});
 
         resMsg.sendResponse(res, 200, true, 'success', data);

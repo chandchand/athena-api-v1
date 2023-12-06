@@ -72,6 +72,20 @@ module.exports = (sequelize) => {
     Users.hasOne(models.Profile, { foreignKey: 'userId', as: 'profile' });
   };
 
+  Users.associate = (models) => {
+    Users.belongsToMany(models.Users, {
+      through: 'Follows',  
+      as: 'followers',    
+      foreignKey: 'followingId',  
+    });
+
+    Users.belongsToMany(models.Users, {
+      through: 'Follows',
+      as: 'following',   
+      foreignKey: 'followerId',  
+    });
+  };
+
   return Users;
   
 };

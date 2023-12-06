@@ -6,14 +6,29 @@ const ErrorHandler = require("../utils/errorHandlers")
 
 exports.isAuthenticated = async (req, res, next) => {
   try {
-  const token = req.headers.authorization || req.cookies || req.headers["x-access-token"];
-  
-  if (!token) {
-    console.error('Token tidak ditemukan');
-    return next(new ErrorHandler('Harap login terlebih dahulu', 401));
-  }
+    let token;
+
+    const authHeader = req.headers.authorization;
+
+    if (authHeader && authHeader.startsWith('Bearer')) {
+      // Token ditemukan di header Authorization dengan metode Bearer
+      token = authHeader.split(' ')[1];
+    } else if (req.cookies && req.cookies.token) {
+      // Token ditemukan di cookie
+      token = req.cookies.token;
+    } else if (req.headers['x-access-token']) {
+      // Token ditemukan di header x-access-token
+      token = req.headers['x-access-token'];
+    }
+
+    if (!token) {
+      console.error('Token tidak ditemukan');
+      return next(new ErrorHandler('Harap login terlebih dahulu', 401));
+    }
+
     const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET || 'r3blu3110923');
-    req.user = await User.findOne({where: {id: decoded.id}});
+    console.log(decoded);
+    req.user = await User.findOne({ where: { id: decoded.id } });
     next();
   } catch (err) {
     res.status(500).json({ error: err.message });

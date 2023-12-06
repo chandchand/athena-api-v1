@@ -12,7 +12,7 @@ module.exports = (sequelize) => {
       type: DataTypes.UUID,
       allowNull: false,
       references: { // Define the foreign key constraint
-        model: 'User', // Reference the `Users` model
+        model: 'Users', // Reference the `Users` model
         key: 'id',
       },
     },
