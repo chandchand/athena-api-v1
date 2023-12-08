@@ -59,7 +59,10 @@ const auth = require('./routes/authRoute');
 const user = require('./routes/userRoute');
 const timeline = require('./routes/timelineRoute');
 
-// app.use('/home', 'Halooo test deploy')
+app.get("/api/", (req,res) => {
+  res.send("Hello Word")
+})
+
 app.use('/api/auth', auth);
 app.use('/api/user', user);
 app.use('/api/timeline', timeline);
