@@ -42,7 +42,7 @@ app.use(morgan('dev'));
 // Hubungkan ke basis data
 // connectDB.testConnection();
 
-db.sequelize.sync({ force: true, logging: (msg) => console.log(`[${db.sequelize.config.environment}] ${msg}`) })
+db.sequelize.sync({ force: false, logging: (msg) => console.log(`[${db.sequelize.config.environment}] ${msg}`) })
   .then(() => {
     console.log('Database synced successfully.');
   })

@@ -13,6 +13,7 @@ const isUser = 'user';
 const isAdmin = 'admin';
 
 router.get('/profile',isAuthenticated, authorizeRole(isUser,isAdmin), Profile.getProfile)
+router.get('/:userId',isAuthenticated, authorizeRole(isUser,isAdmin), Profile.getConnections)
 
 router.post('/send_change_otp',isAuthenticated, authorizeRole(isUser,isAdmin), Profile.sendOtpChangeNumber)
 router.post('/send_mail',isAuthenticated, authorizeRole(isUser,isAdmin), Profile.sendOtpMailChangeNumber)

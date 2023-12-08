@@ -54,5 +54,22 @@ module.exports = (sequelize) => {
     },
   });
 
+  Profile.associate = (models) => {
+    // Associate Profile with followers
+    Profile.belongsToMany(models.Users, {
+      through: 'Follows',
+      as: 'followers', // This should match the alias used in Users model
+      foreignKey: 'followingId',
+      otherKey: 'followerId', // Add this line to specify the other key
+    });
+  
+    // Associate Profile with following
+    Profile.belongsToMany(models.Users, {
+      through: 'Follows',
+      as: 'following', // This should match the alias used in Users model
+      foreignKey: 'followerId',
+      otherKey: 'followingId', // Add this line to specify the other key
+    });
+  };
   return Profile;
 };

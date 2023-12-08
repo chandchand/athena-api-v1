@@ -3,19 +3,19 @@ const ErrorHandler = require("../utils/errorHandlers")
 const { sendOTP } = require('../middlewares/whatsapp');
 const { sendEmail } = require('../middlewares/mailer');
 const db = require ('../models')
-const Profile = require("../models/profile")(db.sequelize)
-const User = require("../models/user")(db.sequelize)
+const {Profile, Users} = require("../models")
 const resMsg = require('../utils/resMsg')
 const cloudinary = require("../utils/cloudinary");
 const { Op } = require("sequelize");
 
-User.hasOne(Profile, {
+Users.hasOne(Profile, {
   foreignKey: 'userId',
   onDelete: 'CASCADE',
   hooks: true,
 });
 
-Profile.belongsTo(User, {
+
+Profile.belongsTo(Users, {
   foreignKey: 'userId',
 });
 
@@ -198,18 +198,70 @@ exports.getProfile = catchAsyncErrors(async (req, res, next) => {
         userId: user_id,
       },
       include: {
-        model: User,
+        model: Users,
         attributes: ['nim', 'name', 'phone_number'], // Specify the desired fields
+        include: [
+          {
+            model: Users,
+            as: 'followers',
+            attributes: ['id', 'name'], // Specify the desired fields for followers
+          },
+          {
+            model: Users,
+            as: 'following',
+            attributes: ['id', 'name'], // Specify the desired fields for following
+          },
+        ],
       },
     });
 
     if (!profile) {
       return next(new ErrorHandler('Tidak Ada Data.', 404));
     }
+    const data = {
+      id: profile.id,
+      userId: profile.userId,
+      avatar: profile.avatar.url,
+      nim: profile.User.nim,
+      name: profile.User.name,
+      phone: profile.User.phone_number,
+      followers: profile.User.followers.length,
+      following: profile.User.following.length,
+    };
+
+    resMsg.sendResponse(res, 200, true, 'success', data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+    return next(new ErrorHandler('Kesalahan Server.', 500));
+  }
+});
+
+exports.getConnections = catchAsyncErrors(async (req, res, next) => {
+  try {
+    const userId = req.params.userId;
+    const relation = req.query.relation; // Get the relation query parameter
+
+    const profile = await Profile.findOne({
+      where: {
+        userId: userId,
+      },
+      include: [
+        {
+          model: Users,
+          as: relation, // Use the value of the relation query parameter as the alias
+          attributes: ['id', 'name'], // Specify the desired fields
+        },
+      ],
+    });
+
+
+    if (!profile) {
+      return next(new ErrorHandler('Profile not found.', 404));
+    }
 
     resMsg.sendResponse(res, 200, true, 'success', profile);
   } catch (err) {
     res.status(500).json({ error: err.message });
-    return next(new ErrorHandler('Kesalahan Server.', 500));
+    return next(new ErrorHandler('Server Error.', 500));
   }
 });
