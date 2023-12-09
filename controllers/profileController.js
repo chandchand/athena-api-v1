@@ -245,21 +245,39 @@ exports.getConnections = catchAsyncErrors(async (req, res, next) => {
       where: {
         userId: userId,
       },
-      include: [
-        {
-          model: Users,
-          as: relation, // Use the value of the relation query parameter as the alias
-          attributes: ['id', 'name'], // Specify the desired fields
-        },
-      ],
+      include: {
+        model: Users,
+        attributes: ['nim', 'name', 'phone_number'], // Specify the desired fields
+        include: [
+          {
+            model: Users,
+            as: relation,
+            attributes: ['id', 'name'],
+          },
+        ],
+      },
     });
-
 
     if (!profile) {
       return next(new ErrorHandler('Profile not found.', 404));
     }
 
-    resMsg.sendResponse(res, 200, true, 'success', profile);
+    const connections = profile.User[relation].map(({ id, name }) => ({ id, name }));
+    
+    if (relation === 'followers') {
+      const data = {
+        followers: connections
+      };
+
+      resMsg.sendResponse(res, 200, true, 'success', data);
+    }else if (relation === 'following') {
+      const data = {
+        following: connections
+      };
+      
+      resMsg.sendResponse(res, 200, true, 'success', data);
+    }
+
   } catch (err) {
     res.status(500).json({ error: err.message });
     return next(new ErrorHandler('Server Error.', 500));
