@@ -50,7 +50,7 @@ app.use(morgan('dev'));
 
 connectDB();
 
-db.sequelize.sync({ force: false, logging: (msg) => console.log(`[${db.sequelize.config.environment}] ${msg}`) })
+db.sequelize.sync({ force: true, logging: (msg) => console.log(`[${db.sequelize.config.environment}] ${msg}`) })
   .then(() => {
     console.log('Database synced successfully.');
   })
