@@ -49,7 +49,7 @@ exports.uploadAvatar = catchAsyncErrors(async(req, res, next)=>{
 
 exports.updateBiodata = catchAsyncErrors(async(req, res, next)=>{
     
-    const {email, gender, bio} = req.body
+    const {username, email, gender, bio} = req.body
     const user_id = req.user;
 
     if (gender !== "pria" && gender !== "wanita") {
@@ -58,6 +58,7 @@ exports.updateBiodata = catchAsyncErrors(async(req, res, next)=>{
 
     try {
         const data = await Profile.update({
+            username: username,
             email: email,
             gender: gender,
             bio: bio
@@ -218,10 +219,16 @@ exports.getProfile = catchAsyncErrors(async (req, res, next) => {
     if (!profile) {
       return next(new ErrorHandler('Tidak Ada Data.', 404));
     }
+    // console.log({profile});
+    // return
     const data = {
       id: profile.id,
       userId: profile.userId,
       avatar: profile.avatar.url,
+      username: profile.username ? profile.username : null,
+      email: profile.email,
+      gender: profile.gender,
+      bio: profile.bio,
       nim: profile.User.nim,
       name: profile.User.name,
       phone: profile.User.phone_number,
@@ -274,7 +281,7 @@ exports.getConnections = catchAsyncErrors(async (req, res, next) => {
       const data = {
         following: connections
       };
-      
+      ww
       resMsg.sendResponse(res, 200, true, 'success', data);
     }
 

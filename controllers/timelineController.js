@@ -102,14 +102,17 @@ exports.createPost = catchAsyncErrors(async (req, res, next) => {
     try {
 
         let imagePath = '';
-        const uploadedImage = await cloudinary.uploader.upload(req.file.path, { // Perubahan di sini
-          folder: "post",
-        });
-    
-        imagePath = {
-          public_id: uploadedImage.public_id,
-          url: uploadedImage.secure_url
-        };
+        
+        if (req.file) {
+          const uploadedImage = await cloudinary.uploader.upload(req.file.path, { // Perubahan di sini
+            folder: "post",
+          });
+      
+          imagePath = {
+            public_id: uploadedImage.public_id,
+            url: uploadedImage.secure_url
+          };         
+        }
     
 
         const data = await Posts.create({
@@ -129,12 +132,22 @@ exports.createPost = catchAsyncErrors(async (req, res, next) => {
 exports.like = catchAsyncErrors(async (req, res, next) => {
     
     const postId = req.params.postId
-    const userId = req.user
+    const userId = req.user.id
 
     try {
+        const existingLike = await Likes.findOne({
+          where: {
+              userId: userId,
+              postId: postId,
+          },
+        });
+
+        if (existingLike) {
+            return resMsg.sendResponse(res, 200, true, 'success', 'Post already liked by you');
+        }
 
         const data = await Likes.create({
-            userId: userId.id,
+            userId: userId,
             postId: postId,
             createdAt: new Date()
         })
@@ -237,6 +250,9 @@ exports.deleteComment = catchAsyncErrors(async (req, res, next) => {
 });
 
 exports.getPosts = catchAsyncErrors(async (req, res, next) => {
+    
+    const userId = req.user.id;
+    
     try {
         const posts = await Posts.findAll({
             include: [
@@ -248,7 +264,7 @@ exports.getPosts = catchAsyncErrors(async (req, res, next) => {
                         {
                           model: Profile,
                           as: 'profile',
-                          attributes: ['avatar'],
+                          attributes: ['avatar','username'],
                         },
                     ], 
                 },
@@ -280,16 +296,21 @@ exports.getPosts = catchAsyncErrors(async (req, res, next) => {
         });
     
         const data = posts.map(post => {
+            const isLiked = post.likes.some(like => like.userId === userId)
+            const isMy = post.userId === userId; 
             return {
                 id: post.id,
                 userId: post.userId,
                 img: post.img.url, // Ambil url dari objek img
                 content: post.content,
                 uploadTime: new Date(post.createdAt).getTime(),
-                user: post.user.name,
+                name: post.user.name,
+                username: post.user.profile.username,
                 avatar: post.user.profile.avatar ? post.user.profile.avatar.url : null,
                 likeCount: post.likes.length, // Hitung jumlah likes
-                comments: post.comments.length
+                comments: post.comments.length,
+                isLiked: isLiked,
+                isMyPost: isMy,
             };
         });
     
@@ -314,12 +335,12 @@ exports.getMyPosts = catchAsyncErrors(async (req, res, next) => {
                 {
                     model: Users,
                     as: 'user',
-                    attributes: ['name'],
+                    attributes: ['name',],
                     include: [
                         {
                           model: Profile,
                           as: 'profile',
-                          attributes: ['avatar'],
+                          attributes: ['avatar','username'],
                         },
                     ], 
                 },
@@ -350,16 +371,21 @@ exports.getMyPosts = catchAsyncErrors(async (req, res, next) => {
         }
 
         const data = posts.map(post => {
+            const isLiked = post.likes.some(like => like.userId === userId)
+            const isMy = post.userId === userId; 
             return {
                 id: post.id,
                 userId: post.userId,
                 img: post.img.url,
                 content: post.content,
                 uploadTime: new Date(post.createdAt).getTime(),
-                user: post.user.name,
+                name: post.user.name,
+                username: post.user.profile.username,
                 avatar: post.user.profile.avatar ? post.user.profile.avatar.url : null,
                 likeCount: post.likes.length,
-                comments: post.comments.length
+                comments: post.comments.length,
+                isLiked: isLiked,
+                isMyPost: isMy,
             };
         });
 
@@ -428,7 +454,7 @@ exports.getOnePosts = catchAsyncErrors(async (req, res, next) => {
               {
                 model: Profile,
                 as: 'profile',
-                attributes: ['avatar'],
+                attributes: ['avatar','username'],
               },
             ],
           },
@@ -467,6 +493,7 @@ exports.getOnePosts = catchAsyncErrors(async (req, res, next) => {
         content: posts.content,
         uploadTime: new Date(posts.createdAt).getTime(),
         name: posts.user.name,
+        username: posts.user.profile.username,
         avatar: posts.user.profile ? posts.user.profile.avatar.url : null,
         likes: posts.likes.map(like => ({ userId: like.userId })),
         likeCount: posts.likes.length,

@@ -2,19 +2,25 @@
 const cors = require('cors')
 const dotenv = require('dotenv');
 const express = require('express');
-const connectDB = require('./config/config'); // Import konfigurasi koneksi basis data
 const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
 const db = require('./models');
+const connectDB = require('./config/mongoDB');
 const ErrorHandler = require('./utils/errorHandlers');
 const error = require('./middlewares/errorMiddleware');
 const morgan = require('morgan');
+const http = require('http');
+const { Server } = require('socket.io');
 // const swaggerJSDoc = require("swagger-jsdoc");
 // const swaggerUI = require("swagger-ui-express");
 
 dotenv.config();
 
 const app = express();
+
+const server = http.createServer(app);
+const io = new Server(server);
+
 const PORT = process.env.PORT || 8000;
 app.use(morgan('dev'));
 
@@ -42,6 +48,8 @@ app.use(morgan('dev'));
 // Hubungkan ke basis data
 // connectDB.testConnection();
 
+connectDB();
+
 db.sequelize.sync({ force: false, logging: (msg) => console.log(`[${db.sequelize.config.environment}] ${msg}`) })
   .then(() => {
     console.log('Database synced successfully.');
@@ -57,6 +65,7 @@ app.use(cors())
 
 const auth = require('./routes/authRoute');
 const user = require('./routes/userRoute');
+const chat = require('./routes/chatRoute');
 const timeline = require('./routes/timelineRoute');
 
 app.get("/api/", (req,res) => {
@@ -65,6 +74,7 @@ app.get("/api/", (req,res) => {
 
 app.use('/api/auth', auth);
 app.use('/api/user', user);
+app.use('/api/chat', chat);
 app.use('/api/timeline', timeline);
 // app.use('/api/tasks', taskRoutes);
 app.use('*',( req, res, next)=> { return next( new ErrorHandler("PAGE NOT FOUND", 404)) }), 
