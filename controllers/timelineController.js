@@ -129,6 +129,40 @@ exports.createPost = catchAsyncErrors(async (req, res, next) => {
     }
 })
 
+exports.editPost = catchAsyncErrors(async (req, res, next) => {
+    const {content} = req.body
+    const userId = req.user
+
+    try {
+
+        let imagePath = '';
+        
+        if (req.file) {
+          const uploadedImage = await cloudinary.uploader.upload(req.file.path, { // Perubahan di sini
+            folder: "post",
+          });
+      
+          imagePath = {
+            public_id: uploadedImage.public_id,
+            url: uploadedImage.secure_url
+          };         
+        }
+    
+
+        const data = await Posts.create({
+            userId: userId.id,
+            img: imagePath,
+            content,
+            createdAt: new Date()
+        })
+        resMsg.sendResponse(res, 200, true, 'success', data);
+
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+        return next(new ErrorHandler('Kesalahan Server.', 500));
+    }
+})
+
 exports.like = catchAsyncErrors(async (req, res, next) => {
     
     const postId = req.params.postId
@@ -489,12 +523,12 @@ exports.getOnePosts = catchAsyncErrors(async (req, res, next) => {
       const data = {
         id: posts.id,
         userId: posts.userId,
-        imgContent: posts.img.url,
+        imgContent: posts.url ? posts.url : null,
         content: posts.content,
         uploadTime: new Date(posts.createdAt).getTime(),
         name: posts.user.name,
         username: posts.user.profile.username,
-        avatar: posts.user.profile ? posts.user.profile.avatar.url : null,
+        avatar: posts.user.profile.avatar ? posts.user.profile.avatar.url : null,
         likes: posts.likes.map(like => ({ userId: like.userId })),
         likeCount: posts.likes.length,
         comments: posts.comments.map(comment => ({

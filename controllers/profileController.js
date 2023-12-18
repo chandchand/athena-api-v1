@@ -47,6 +47,45 @@ exports.uploadAvatar = catchAsyncErrors(async(req, res, next)=>{
     }
 })
 
+// controllers/timelineController.js
+
+exports.deleteAvatar = catchAsyncErrors(async (req, res, next) => {
+  const user_id = req.user.id;
+
+  try {
+      const profile = await Profile.findOne({
+          where: {
+              userId: user_id,
+          },
+      });
+
+      if (!profile) {
+          return resMsg.sendResponse(res, 404, false, 'Profile not found', null);
+      }
+
+      // Hapus avatar dari Cloudinary
+      if (profile.avatar && profile.avatar.public_id) {
+          await cloudinary.uploader.destroy(profile.avatar.public_id);
+      }
+
+      // Set avatar di database menjadi null atau kosong
+      const data = await Profile.update({
+          avatar: null,
+      }, {
+          where: {
+              userId: user_id,
+          },
+          returning: true, // Mengembalikan data setelah diupdate
+      });
+
+      resMsg.sendResponse(res, 200, true, 'Avatar deleted successfully', data[1][0]); // Mengambil data setelah diupdate
+  } catch (err) {
+      res.status(500).json({ error: err.message });
+      return next(new ErrorHandler('Kesalahan Server.', 500));
+  }
+});
+
+
 exports.updateBiodata = catchAsyncErrors(async(req, res, next)=>{
     
     const {username, email, gender, bio} = req.body
@@ -191,7 +230,7 @@ exports.verifyChangeNumber = catchAsyncErrors(async (req, res, next) => {
     }
 });
 
-exports.getProfile = catchAsyncErrors(async (req, res, next) => {
+exports.getMyProfile = catchAsyncErrors(async (req, res, next) => {
   try {
     const user_id = req.user.id;
     const profile = await Profile.findOne({
@@ -224,7 +263,59 @@ exports.getProfile = catchAsyncErrors(async (req, res, next) => {
     const data = {
       id: profile.id,
       userId: profile.userId,
-      avatar: profile.avatar.url,
+      avatar: profile.avatar ? profile.avatar.url : null,
+      username: profile.username ? profile.username : null,
+      email: profile.email,
+      gender: profile.gender,
+      bio: profile.bio,
+      nim: profile.User.nim,
+      name: profile.User.name,
+      phone: profile.User.phone_number,
+      followers: profile.User.followers.length,
+      following: profile.User.following.length,
+    };
+
+    resMsg.sendResponse(res, 200, true, 'success', data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+    return next(new ErrorHandler('Kesalahan Server.', 500));
+  }
+});
+
+exports.getProfile = catchAsyncErrors(async (req, res, next) => {
+  try {
+    const id = req.params.id;
+    const profile = await Profile.findOne({
+      where: {
+        userId: id,
+      },
+      include: {
+        model: Users,
+        attributes: ['nim', 'name', 'phone_number'], // Specify the desired fields
+        include: [
+          {
+            model: Users,
+            as: 'followers',
+            attributes: ['id', 'name'], // Specify the desired fields for followers
+          },
+          {
+            model: Users,
+            as: 'following',
+            attributes: ['id', 'name'], // Specify the desired fields for following
+          },
+        ],
+      },
+    });
+
+    if (!profile) {
+      return next(new ErrorHandler('Tidak Ada Data.', 404));
+    }
+    // console.log({profile});
+    // return
+    const data = {
+      id: profile.id,
+      userId: profile.userId,
+      avatar: profile.avatar ? profile.avatar.url : null,
       username: profile.username ? profile.username : null,
       email: profile.email,
       gender: profile.gender,
@@ -281,7 +372,6 @@ exports.getConnections = catchAsyncErrors(async (req, res, next) => {
       const data = {
         following: connections
       };
-      ww
       resMsg.sendResponse(res, 200, true, 'success', data);
     }
 
