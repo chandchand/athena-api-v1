@@ -92,8 +92,17 @@ exports.getChat = catchAsyncErrors(async(req, res, next) => {
             ]
         }).sort({ createdAt: 'asc' });
 
-        const senderData = await Users.findByPk(senderId, {
-            attributes: ['name', 'avatar'],
+        const senderData = await Users.findOne({
+          where: { id: senderId },
+          attributes: ['id', 'name'],
+          include: [
+              {
+                  model: Profile,
+                  attributes: ['avatar'],
+                  where: { userId: senderId },
+                  required: true,
+              },
+            ],
         });
 
         const data = {
@@ -103,9 +112,11 @@ exports.getChat = catchAsyncErrors(async(req, res, next) => {
                 receiverId: chat.receiverId,
                 message: chat.message,
                 createdAt: chat.createdAt,
-                name: senderData ? senderData.name : null,
-                avatar: senderData ? senderData.avatar : null,
             })),
+            user_data:{
+              name: senderData ? senderData.name : null,
+              avatar: senderData ? senderData.avatar : null,
+            }
         };
 
         resMsg.sendResponse(res, 200, true, 'success', data);
