@@ -10,43 +10,25 @@ const ErrorHandler = require('./utils/errorHandlers');
 const error = require('./middlewares/errorMiddleware');
 const morgan = require('morgan');
 const http = require('http');
-const { Server } = require('socket.io');
-// const swaggerJSDoc = require("swagger-jsdoc");
-// const swaggerUI = require("swagger-ui-express");
+const socketIO = require('socket.io');
+const { setupSocket } = require('./utils/socket'); 
 
 dotenv.config();
 
 const app = express();
 
 const server = http.createServer(app);
-const io = new Server(server);
+const io = socketIO(server, {
+    cors:
+    {
+      origin: "*"
+     }
+});
+
+setupSocket(io);
 
 const PORT = process.env.PORT || 8000;
 app.use(morgan('dev'));
-
-// const swaggerOptions = {
-//   swaggerDefinition: {
-//     openapi : '3.0.0', 
-//     info: {
-//       title: 'API BACKEND Reblue.id',
-//       description: 'Dokumentasi API Reblue.id',
-//       version: '1.0.0',
-//     },
-//     servers:[{
-//       url: "http://localhost:3001/api/" 
-//     },{
-//       url: "https://api.reblue.id/api/" 
-//     }]
-//   },
-//   apis: ['./swagger.yaml'], // Sesuaikan dengan path ke file yang berisi definisi rute Anda
-// };
-
-// const specs = swaggerJSDoc(swaggerOptions);
-
-// app.use('/api/api-docs', swaggerUI.serve, swaggerUI.setup(specs));
-
-// Hubungkan ke basis data
-// connectDB.testConnection();
 
 connectDB();
 

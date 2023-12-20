@@ -8,6 +8,11 @@ const resMsg = require('../utils/resMsg')
 const cloudinary = require("../utils/cloudinary");
 const { Op } = require("sequelize");
 const Chat = require("../models/chat/chatRoom")
+const io = require('socket.io')();
+
+const sendMessageToUser = (userId, eventName, data) => {
+  io.to(userId).emit(eventName, data);
+};
 
 exports.getAllChat = catchAsyncErrors(async(req, res, next) => {
     const senderId = req.user.id
@@ -63,21 +68,20 @@ exports.getAllChat = catchAsyncErrors(async(req, res, next) => {
 })
 
 
-exports.sendChat = catchAsyncErrors(async(req, res, next) => {
-    const receiverId = req.params.id;
-    const senderId = req.user.id;
-    const { message } = req.body; // Menyesuaikan dengan properti yang dikirimkan dari client
+exports.sendChat = catchAsyncErrors(async (req, res, next) => {
+  const receiverId = req.params.id;
+  const senderId = req.user.id;
+  const { message } = req.body;
 
-    try {
-        const data = new Chat({ senderId, receiverId, message });
-        await data.save();
+  try {
+    // Kirim pesan melalui Socket.IO
+    sendMessageToUser(receiverId, 'receiveChat', { senderId, receiverId, message });
 
-        io.to(receiverId).emit('receiveChat', data); // Mengirim pesan hanya ke socket dengan receiverId
-        resMsg.sendResponse(res, 200, true, 'success', data);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-        return next(new ErrorHandler('Kesalahan Server.', 500));
-    }
+    resMsg.sendResponse(res, 200, true, 'success', { senderId, receiverId, message });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+    return next(new ErrorHandler('Kesalahan Server.', 500));
+  }
 });
 
 exports.getChat = catchAsyncErrors(async(req, res, next) => {
@@ -93,13 +97,13 @@ exports.getChat = catchAsyncErrors(async(req, res, next) => {
         }).sort({ createdAt: 'asc' });
 
         const senderData = await Users.findOne({
-          where: { id: senderId },
+          where: { id: receiverId },
           attributes: ['id', 'name'],
           include: [
               {
                   model: Profile,
                   attributes: ['avatar'],
-                  where: { userId: senderId },
+                  where: { userId: receiverId },
                   required: true,
               },
             ],

@@ -2,16 +2,20 @@ const mongoose = require('mongoose');
 
 const chatSchema = new mongoose.Schema({
   senderId: {
-    type: String,// Referensi ke model User
+    type: String,  // Menggunakan String untuk UUID
     required: true,
   },
   receiverId: {
-    type: String, // Referensi ke model User
+    type: String,  // Menggunakan String untuk UUID
     required: true,
   },
   message: {
     type: String,
     required: true,
+  },
+  seen: {
+    type: Boolean,
+    default: false,
   },
   createdAt: {
     type: Date,
