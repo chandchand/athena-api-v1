@@ -11,7 +11,7 @@ const error = require('./middlewares/errorMiddleware');
 const morgan = require('morgan');
 const http = require('http');
 const socketIO = require('socket.io');
-const { setupSocket } = require('./utils/socketIo'); 
+const { setupSocket } = require('./utils/socketIo');
 
 dotenv.config();
 
@@ -19,14 +19,12 @@ const app = express();
 
 const server = http.createServer(app);
 const io = socketIO(server, {
-    cors:
-    {
+    cors: {
       origin: "*"
      }
 });
 
 setupSocket(io);
-console.log(setupSocket(io));
 
 const PORT = process.env.PORT || 8000;
 app.use(morgan('dev'));
@@ -60,7 +58,7 @@ app.use('/api/user', user);
 app.use('/api/chat', chat);
 app.use('/api/timeline', timeline);
 // app.use('/api/tasks', taskRoutes);
-app.use('*',( req, res, next)=> { return next( new ErrorHandler("PAGE NOT FOUND", 404)) }), 
+app.use('*',( req, res, next)=> { return next( new ErrorHandler("PAGE NOT FOUND", 404)) }) 
 app.use(error.errorMiddleware);
 
 app.listen(PORT, () => {
