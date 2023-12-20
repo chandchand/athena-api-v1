@@ -11,7 +11,7 @@ const error = require('./middlewares/errorMiddleware');
 const morgan = require('morgan');
 const http = require('http');
 const socketIO = require('socket.io');
-const { setupSocket } = require('./utils/socket'); 
+const { setupSocket } = require('./utils/socketIo'); 
 
 dotenv.config();
 
