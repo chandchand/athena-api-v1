@@ -26,6 +26,7 @@ const io = socketIO(server, {
 });
 
 setupSocket(io);
+console.log(setupSocket(io));
 
 const PORT = process.env.PORT || 8000;
 app.use(morgan('dev'));

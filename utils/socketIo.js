@@ -1,11 +1,12 @@
+// socketIo.js
 const ChatRoom = require('../models/chat/chatRoom');
 
-const setupSocket = (io) => {
+function setupSocket(io) {
   io.on('connection', (socket) => {
-    console.log('User connected');
+    console.log('User connected:', socket.id);
 
     socket.on('disconnect', () => {
-      console.log('User disconnected');
+      console.log('User disconnected:', socket.id);
     });
 
     socket.on('sendMessage', async (data) => {
@@ -21,11 +22,10 @@ const setupSocket = (io) => {
 
         // Kirim pesan ke penerima
         io.to(receiverId).emit('receiveMessage', { chat });
-
-        resMsg.sendResponse(res, 200, true, 'success', { chat });
       } catch (err) {
-        res.status(500).json({ error: err.message });
-        return next(new ErrorHandler('Kesalahan Server.', 500));
+        console.error('Error sending message:', err);
+        // Handling error for socket.io event
+        socket.emit('errorMessage', { error: 'Failed to send message' });
       }
     });
 
@@ -43,9 +43,11 @@ const setupSocket = (io) => {
         io.to(senderId).emit('messageSeen', { receiverId });
       } catch (err) {
         console.error('Error updating message seen status:', err);
+        // Handling error for socket.io event
+        socket.emit('errorMessage', { error: 'Failed to update message seen status' });
       }
     });
   });
-};
+}
 
 module.exports = { setupSocket };
