@@ -26,4 +26,4 @@ const message = new mongoose.Schema({
 
 const Message = mongoose.model('Message', message);
 
-module.exports = RoomChat;
+module.exports = Message;
