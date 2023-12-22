@@ -7,66 +7,85 @@ const {Profile, Users} = require("../models")
 const resMsg = require('../utils/resMsg')
 const cloudinary = require("../utils/cloudinary");
 const { Op } = require("sequelize");
-const Chat = require("../models/chat/chatRoom")
+const Room = require("../models/chat/roomModel")
+const Message = require("../models/chat/messageModel")
 const io = require('socket.io')();
 
 const sendMessageToUser = (userId, eventName, data) => {
   io.to(userId).emit(eventName, data);
 };
 
+// ...
+
 exports.getAllChat = catchAsyncErrors(async(req, res, next) => {
-    const senderId = req.user.id
+  const userId = req.user.id;
 
-    try {
-        const chats = await Chat.aggregate([
-            {
-              $match: {
-                $or: [{ senderId: userId }, { receiverId: userId }],
-              },
+  try {
+      const chats = await Message.aggregate([
+          {
+            $match: {
+              'sender': userId,
             },
-            {
-              $sort: { createdAt: -1 },
+          },
+          {
+            $group: {
+              _id: '$roomId',
+              chat: { $first: '$$ROOT' },
             },
-            {
-              $group: {
-                _id: {
-                  $cond: {
-                    if: { $eq: ['$senderId', userId] },
-                    then: '$receiverId',
-                    else: '$senderId',
-                  },
-                },
-                chat: { $first: '$$ROOT' },
-              },
-            },
-            {
-              $replaceRoot: { newRoot: '$chat' },
-            },
-        ]);
-        // Mengambil avatar dari tabel User PostgreSQL
-        const senderData = await Users.findByPk(senderId, {
-            attributes: ['name', 'avatar'],
-        });
-        // Menyusun respons dengan menyertakan avatar
-        const data = {
-          chats: chats.map(chat => ({
-            _id: chat._id,
-            senderId: chat.senderId,
-            receiverId: chat.receiverId,
-            message: chat.message,
-            createdAt: chat.createdAt,
-            // Menambahkan avatar ke dalam data chat
-            avatar: senderData ? senderData.avatar : null,
-            name: senderData ? senderData.name : null,
+          },
+          {
+            $replaceRoot: { newRoot: '$chat' },
+          },
+          {
+            $sort: { createdAt: -1 },
+          },
+      ]);
+
+      const data = {
+        chats: chats.map(chat => ({
+          _id: chat._id,
+          senderId: chat.sender,
+          receiverId: chat.participants.find(id => id !== userId),
+          message: chat.message,
+          createdAt: chat.createdAt,
+        })),
+      };
+
+      resMsg.sendResponse(res, 200, true, 'success', data);
+  } catch (err) {
+      res.status(500).json({ error: err.message });
+      return next(new ErrorHandler('Kesalahan Server.', 500));
+  }
+});
+
+exports.getChat = catchAsyncErrors(async(req, res, next) => {
+  const receiverId = req.params.id;
+  const senderId = req.user.id;
+
+  try {
+      const chats = await Message.find({
+          $or: [
+              { sender: senderId, 'participants': receiverId },
+              { sender: receiverId, 'participants': senderId },
+          ]
+      }).sort({ createdAt: 'asc' });
+
+      const data = {
+          chats: chats.map((chat) => ({
+              _id: chat._id,
+              senderId: chat.sender,
+              receiverId: chat.participants.find(id => id !== senderId),
+              message: chat.message,
+              createdAt: chat.createdAt,
           })),
-        };
-        resMsg.sendResponse(res, 200, true, 'success', data);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-        return next(new ErrorHandler('Kesalahan Server.', 500));
-    }
-})
+      };
 
+      resMsg.sendResponse(res, 200, true, 'success', data);
+  } catch (err) {
+      res.status(500).json({ error: err.message });
+      return next(new ErrorHandler('Kesalahan Server.', 500));
+  }
+});
 
 exports.sendChat = catchAsyncErrors(async (req, res, next) => {
   const receiverId = req.params.id;
@@ -74,58 +93,30 @@ exports.sendChat = catchAsyncErrors(async (req, res, next) => {
   const { message } = req.body;
 
   try {
-    // Kirim pesan melalui Socket.IO
-    sendMessageToUser(receiverId, 'receiveChat', { senderId, receiverId, message });
+    // Cari atau buat ruang obrolan antara pengirim dan penerima
+    let roomChat = await Room.findOne({
+      participants: { $all: [senderId, receiverId] },
+    });
+
+    if (!roomChat) {
+      roomChat = await Room.create({
+        participants: [senderId, receiverId],
+      });
+    }
+
+    // Simpan pesan ke MongoDB
+    const chat = await Message.create({
+      roomId: roomChat._id,
+      sender: senderId,
+      message: message,
+    });
+
+    // Kirim pesan ke penerima
+    io.to(receiverId).emit('receiveMessage', { senderId, message });
 
     resMsg.sendResponse(res, 200, true, 'success', { senderId, receiverId, message });
   } catch (err) {
     res.status(500).json({ error: err.message });
     return next(new ErrorHandler('Kesalahan Server.', 500));
   }
-});
-
-exports.getChat = catchAsyncErrors(async(req, res, next) => {
-    const receiverId = req.params.id;
-    const senderId = req.user.id;
-
-    try {
-        const chats = await Chat.find({
-            $or: [
-                { senderId, receiverId },
-                { senderId: receiverId, receiverId: senderId },
-            ]
-        }).sort({ createdAt: 'asc' });
-
-        const senderData = await Users.findOne({
-          where: { id: receiverId },
-          attributes: ['id', 'name'],
-          include: [
-              {
-                  model: Profile,
-                  attributes: ['avatar'],
-                  where: { userId: receiverId },
-                  required: true,
-              },
-            ],
-        });
-
-        const data = {
-            chats: chats.map((chat) => ({
-                _id: chat._id,
-                senderId: chat.senderId,
-                receiverId: chat.receiverId,
-                message: chat.message,
-                createdAt: chat.createdAt,
-            })),
-            user_data:{
-              name: senderData ? senderData.name : null,
-              avatar: senderData ? senderData.avatar : null,
-            }
-        };
-
-        resMsg.sendResponse(res, 200, true, 'success', data);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-        return next(new ErrorHandler('Kesalahan Server.', 500));
-    }
 });

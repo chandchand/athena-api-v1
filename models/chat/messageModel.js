@@ -1,11 +1,12 @@
 const mongoose = require('mongoose');
 
-const chatSchema = new mongoose.Schema({
-  senderId: {
-    type: String,  // Menggunakan String untuk UUID
+const message = new mongoose.Schema({
+  roomId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'ChatRoom',
     required: true,
   },
-  receiverId: {
+  sender: {
     type: String,  // Menggunakan String untuk UUID
     required: true,
   },
@@ -23,11 +24,6 @@ const chatSchema = new mongoose.Schema({
   },
 });
 
-await ChatRoom.updateMany(
-  { senderId: receiverId, receiverId: senderId },
-  { $set: { seen: true } }
-);
+const Message = mongoose.model('Message', message);
 
-const Chat = mongoose.model('Chat', chatSchema);
-
-module.exports = Chat;
+module.exports = RoomChat;

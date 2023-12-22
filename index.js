@@ -11,7 +11,7 @@ const connectDB = require('./config/mongoDB');
 const ErrorHandler = require('./utils/errorHandlers');
 const error = require('./middlewares/errorMiddleware');
 const morgan = require('morgan');
-const ChatRoom = require('./models/chat/chatRoom'); // Import model MongoDB
+const ChatRoom = require('./models/chat/roomModel'); // Import model MongoDB
 
 dotenv.config();
 
@@ -23,7 +23,6 @@ const io = socketIO(server, {
      }
 });
 
-// Setup Socket.IO
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
 
@@ -35,11 +34,18 @@ io.on('connection', (socket) => {
     try {
       const { senderId, receiverId, message } = data;
 
+      // Cari atau buat room chat
+      const room = await RoomChat.findOneAndUpdate(
+        { participants: { $all: [senderId, receiverId] } },
+        { $setOnInsert: { participants: [senderId, receiverId] } },
+        { new: true, upsert: true }
+      );
+
       // Simpan pesan ke MongoDB
-      const chat = await ChatRoom.create({
-        senderId,
-        receiverId,
-        message,
+      const chat = await Message.create({
+        roomId: room._id,
+        sender: senderId,
+        message: message,
       });
 
       // Kirim pesan ke penerima
@@ -56,8 +62,8 @@ io.on('connection', (socket) => {
       const { senderId, receiverId } = data;
 
       // Update status pesan yang telah dilihat di MongoDB
-      await ChatRoom.updateMany(
-        { senderId: receiverId, receiverId: senderId },
+      await Message.updateMany(
+        { sender: receiverId, 'participants': senderId },
         { $set: { seen: true } }
       );
 
