@@ -5,13 +5,13 @@ const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
 const http = require('http');
 const socketIO = require('socket.io');
-const { setupSocket } = require('./utils/socketIo');
 const db = require('./models');
 const connectDB = require('./config/mongoDB');
 const ErrorHandler = require('./utils/errorHandlers');
 const error = require('./middlewares/errorMiddleware');
 const morgan = require('morgan');
-const ChatRoom = require('./models/chat/roomModel'); // Import model MongoDB
+const RoomChat = require('./models/chat/roomModel'); // Import model MongoDB
+const Message = require('./models/chat/messageModel'); // Import model MongoDB
 
 dotenv.config();
 
