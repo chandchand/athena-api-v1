@@ -43,7 +43,7 @@ io.on('connection', (socket) => {
       });
 
       // Kirim pesan ke penerima
-      io.to(receiverId).emit('receiveMessage', { chat });
+      io.to(receiverId).emit('receiveMessage', { senderId, message });
     } catch (err) {
       console.error('Error sending message:', err);
       // Handling error for socket.io event

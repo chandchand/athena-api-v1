@@ -23,6 +23,11 @@ const chatSchema = new mongoose.Schema({
   },
 });
 
+await ChatRoom.updateMany(
+  { senderId: receiverId, receiverId: senderId },
+  { $set: { seen: true } }
+);
+
 const Chat = mongoose.model('Chat', chatSchema);
 
 module.exports = Chat;
