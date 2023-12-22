@@ -63,21 +63,33 @@ io.on('connection', (socket) => {
   socket.on('messageSeen', async (data) => {
     try {
       const { senderId, receiverId } = data;
-
+  
+      // Dapatkan ruangan dengan partisipan tertentu
+      const room = await RoomChat.findOne({
+        participants: { $all: [senderId, receiverId] },
+      });
+  
+      // Pastikan room ditemukan sebelum melanjutkan
+      if (!room) {
+        console.error('Room not found');
+        return;
+      }
+  
       // Update status pesan yang telah dilihat di MongoDB
       await Message.updateMany(
         { roomId: room._id, sender: receiverId },
         { $set: { seen: true } }
       );
-
+  
       // Kirim notifikasi ke pengirim bahwa pesan telah dilihat
       io.to(senderId).emit('messageSeen', { receiverId });
     } catch (err) {
       console.error('Error updating message seen status:', err);
       // Handling error for socket.io event
-      socket.emit('errorMessage', { error: 'Failed to update message seen status' });
+      io.emit('errorMessage', { error: 'Failed to update message seen status' });
     }
   });
+  
 });
 
 const PORT = process.env.PORT || 8000;
