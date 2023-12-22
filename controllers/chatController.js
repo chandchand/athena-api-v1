@@ -41,6 +41,19 @@ exports.getAllChat = catchAsyncErrors(async(req, res, next) => {
           },
       ]);
 
+      const senderData = await Users.findOne({
+        where: { id: receiverId },
+        attributes: ['id', 'name'],
+        include: [
+          {
+            model: Profile,
+            attributes: ['avatar'],
+            where: { userId: receiverId },
+            required: true,
+          },
+        ],
+      });
+
       const data = {
         chats: chats.map(chat => ({
           _id: chat._id,
@@ -48,6 +61,8 @@ exports.getAllChat = catchAsyncErrors(async(req, res, next) => {
           receiverId: chat.participants.find(id => id !== userId),
           message: chat.message,
           createdAt: chat.createdAt,
+          name: senderData ? senderData.name : null,
+          avatar: senderData ? senderData.Profile.avatar : null,
         })),
       };
 
@@ -70,6 +85,19 @@ exports.getChat = catchAsyncErrors(async(req, res, next) => {
           ]
       }).sort({ createdAt: 'asc' });
 
+      const senderData = await Users.findOne({
+        where: { id: receiverId },
+        attributes: ['id', 'name'],
+        include: [
+          {
+            model: Profile,
+            attributes: ['avatar'],
+            where: { userId: receiverId },
+            required: true,
+          },
+        ],
+      });
+
       const data = {
           chats: chats.map((chat) => ({
               _id: chat._id,
@@ -77,6 +105,8 @@ exports.getChat = catchAsyncErrors(async(req, res, next) => {
               receiverId: chat.participants.find(id => id !== senderId),
               message: chat.message,
               createdAt: chat.createdAt,
+              name: senderData ? senderData.name : null,
+              avatar: senderData ? senderData.Profile.avatar : null,
           })),
       };
 
