@@ -51,8 +51,11 @@ io.on('connection', (socket) => {
       // Kirim pesan ke penerima
       io.to(receiverId).emit('receiveMessage', { senderId, message });
     } catch (err) {
+
       console.error('Error sending message:', err);
       // Handling error for socket.io event
+      io.emit('errorMessage', { error: 'Failed to send message' });
+
       socket.emit('errorMessage', { error: 'Failed to send message' });
     }
   });
@@ -63,7 +66,7 @@ io.on('connection', (socket) => {
 
       // Update status pesan yang telah dilihat di MongoDB
       await Message.updateMany(
-        { sender: receiverId, 'participants': senderId },
+        { roomId: room._id, sender: receiverId },
         { $set: { seen: true } }
       );
 
