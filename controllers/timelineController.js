@@ -476,6 +476,7 @@ exports.getMyPosts = catchAsyncErrors(async (req, res, next) => {
 // });
 
 exports.getOnePosts = catchAsyncErrors(async (req, res, next) => {
+    const userId = req.user;
     const id = req.params.id;
     try {
       const posts = await Posts.findOne({
@@ -520,10 +521,13 @@ exports.getOnePosts = catchAsyncErrors(async (req, res, next) => {
         where: { id: id },
       });
 
+      const isLiked = posts.likes.some(like => like.userId === userId)
+      const isMy = posts.userId === userId; 
       const data = {
+        
         id: posts.id,
         userId: posts.userId,
-        imgContent: posts.url ? posts.url : null,
+        imgContent: posts.img ? posts.img.url : null,
         content: posts.content,
         uploadTime: new Date(posts.createdAt).getTime(),
         name: posts.user.name,
@@ -539,10 +543,12 @@ exports.getOnePosts = catchAsyncErrors(async (req, res, next) => {
             user: {
                 id: comment.user.id,
                 name: comment.user.name,
-                avatar: posts.user.profile ? posts.user.profile.avatar.url : null,
+                avatar: posts.user.profile.avatar ? posts.user.profile.avatar.url : null,
             },
         })),
         commentCount: posts.comments.length,
+        isLiked: isLiked,
+        isMyPost: isMy,
       };
   
       resMsg.sendResponse(res, 200, true, 'success', data);
