@@ -3,9 +3,15 @@ const mongoose = require('mongoose');
 const roomChat = new mongoose.Schema({
   participants: [
     {
-      type: String,  // Menggunakan String untuk UUID
-      required: true,
-    },
+      user: {
+        type: String,  // UUID pengguna dari PostgreSQL
+        required: true,
+      },
+      lastRead: {
+        type: Date,
+        default: null,
+      },
+    }
   ],
   createdAt: {
     type: Date,

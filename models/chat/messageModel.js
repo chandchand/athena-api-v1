@@ -7,17 +7,25 @@ const message = new mongoose.Schema({
     required: true,
   },
   sender: {
-    type: String,  // Menggunakan String untuk UUID
+    type: String,  // UUID pengguna dari PostgreSQL
     required: true,
   },
   message: {
     type: String,
     required: true,
   },
-  seen: {
-    type: Boolean,
-    default: false,
-  },
+  seenBy: [
+    {
+      user: {
+        type: String,  // UUID pengguna
+        required: true,
+      },
+      seenAt: {
+        type: Date,
+        default: null,
+      },
+    }
+  ],
   createdAt: {
     type: Date,
     default: Date.now,

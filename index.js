@@ -24,73 +24,76 @@ const io = socketIO(server, {
 });
 
 io.on('connection', (socket) => {
-  console.log('User connected:', socket.id);
+  console.log('User connected');
 
-  socket.on('disconnect', () => {
-    console.log('User disconnected:', socket.id);
-  });
-
-  socket.on('sendMessage', async (data) => {
+  socket.on('joinRoom', async ({ roomId, userId }) => {
     try {
-      const { senderId, receiverId, message } = data;
+      // Lakukan validasi atau logika pembuatan ruang obrolan
+      let room = await RoomChat.findOne({ _id: roomId });
 
-      // Cari atau buat room chat
-      const room = await RoomChat.findOneAndUpdate(
-        { participants: { $all: [senderId, receiverId] } },
-        { $setOnInsert: { participants: [senderId, receiverId] } },
-        { new: true, upsert: true }
-      );
-
-      // Simpan pesan ke MongoDB
-      const chat = await Message.create({
-        roomId: room._id,
-        sender: senderId,
-        message: message,
-      });
-
-      // Kirim pesan ke penerima
-      io.to(receiverId).emit('receiveMessage', { senderId, message });
-    } catch (err) {
-
-      console.error('Error sending message:', err);
-      // Handling error for socket.io event
-      io.emit('errorMessage', { error: 'Failed to send message' });
-
-      socket.emit('errorMessage', { error: 'Failed to send message' });
-    }
-  });
-
-  socket.on('messageSeen', async (data) => {
-    try {
-      const { senderId, receiverId } = data;
-  
-      // Dapatkan ruangan dengan partisipan tertentu
-      const room = await RoomChat.findOne({
-        participants: { $all: [senderId, receiverId] },
-      });
-  
-      // Pastikan room ditemukan sebelum melanjutkan
       if (!room) {
-        console.error('Room not found');
-        return;
+        // Jika ruang obrolan belum ada, buat ruang obrolan baru
+        room = new RoomChat({
+          _id: roomId,
+          participants: [{ user: userId }],
+        });
+        await room.save();
+      } else {
+        // Jika ruang obrolan sudah ada, periksa apakah pengguna sudah bergabung
+        const isUserAlreadyJoined = room.participants.some((participant) => participant.user === userId);
+        if (!isUserAlreadyJoined) {
+          room.participants.push({ user: userId });
+          await room.save();
+        }
       }
-  
-      // Update status pesan yang telah dilihat di MongoDB
-      await Message.updateMany(
-        { roomId: room._id, sender: receiverId },
-        { $set: { seen: true } }
-      );
-  
-      // Kirim notifikasi ke pengirim bahwa pesan telah dilihat
-      io.to(senderId).emit('messageSeen', { receiverId });
-    } catch (err) {
-      console.error('Error updating message seen status:', err);
-      // Handling error for socket.io event
-      io.emit('errorMessage', { error: 'Failed to update message seen status' });
+
+      // Bergabung ke ruang obrolan
+      socket.join(roomId);
+      console.log(`User ${userId} joined room ${roomId}`);
+    } catch (error) {
+      console.error('Error joining room:', error);
     }
   });
-  
+
+  socket.on('sendMessage', (data) => {
+    // Pastikan ruang obrolan sudah ada atau buat baru
+    RoomChat.findOneAndUpdate(
+      { _id: data.roomId, 'participants.user': data.sender },
+      { $setOnInsert: { _id: data.roomId, participants: [{ user: data.sender }] } },
+      { upsert: true, new: true }
+    )
+      .then((room) => {
+        // Simpan pesan ke database
+        const newMessage = new Message({
+          roomId: data.roomId,
+          sender: data.sender,
+          message: data.message,
+        });
+
+        return newMessage.save();
+      })
+      .then((savedMessage) => {
+        // Tambahkan informasi seenBy pada pesan
+        const seenByInfo = {
+          user: data.sender,
+          seenAt: savedMessage.createdAt,
+        };
+
+        // Kirim pesan ke ruang obrolan
+        io.to(data.roomId).emit('receiveMessage', { ...savedMessage.toObject(), seenBy: [seenByInfo] });
+      })
+      .catch((error) => {
+        console.error('Error creating or updating room:', error);
+      });
+  });
+
+  // Disconnect event
+  socket.on('disconnect', () => {
+    console.log('User disconnected');
+    // ... (tindakan saat user disconnect, misalnya update status online/offline)
+  });
 });
+
 
 const PORT = process.env.PORT || 8000;
 
