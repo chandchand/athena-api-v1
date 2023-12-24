@@ -1,23 +1,22 @@
 const mongoose = require('mongoose');
+const Schema = mongoose.Schema;
 
-const roomChat = new mongoose.Schema({
-  participants: [
-    {
-      user: {
-        type: String,  // UUID pengguna dari PostgreSQL
-        required: true,
-      },
-      lastRead: {
-        type: Date,
-        default: null,
-      },
-    }
-  ],
-  createdAt: {
-    type: Date,
-    default: Date.now,
-  },
+const roomChatSchema = new Schema({
+    users: [
+        {
+            userId: {
+                type: String,
+                required: true,
+            },
+            partnerId: {
+                type: String,
+                required: true,
+            },
+        },
+    ],
+    // Properti lain yang mungkin Anda butuhkan
 });
-const RoomChat = mongoose.model('RoomChat', roomChat);
+// console.log(roomChatSchema);
+const RoomChat = mongoose.model('RoomChat', roomChatSchema);
 
 module.exports = RoomChat;

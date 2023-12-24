@@ -174,8 +174,18 @@ exports.verifyOTP = catchAsyncErrors(async (req, res, next) => {
         const token = jwt.sign({ phone_number: user.phone_number, id: user.id, role: user.role }, process.env.JWT_SECRET || 'r3blu3110923', {
           expiresIn: '24h',
         });
+
+        const profile = await Profile.findOne({where:{userId: user.id}})
+
+        const data = {
+          name: user.name,
+          username: profile.username ? profile.username : null,
+          avatar: profile.avatar ? profile.avatar : null,
+          bio: profile.bio ? profile.bio : null
+        }
+
         res.status(200).json(
-          { message: "Selamat Datang Di Reblue anda berhasil aktivasi account anda", token});
+          { message: "Selamat Datang Di Reblue anda berhasil aktivasi account anda", token, data});
 
       } else {
 
@@ -191,9 +201,18 @@ exports.verifyOTP = catchAsyncErrors(async (req, res, next) => {
         const token = jwt.sign({ phone_number: user.phone_number, id: user.id, role: user.role }, process.env.JWT_SECRET || 'r3blu3110923', {
           expiresIn: '24h',
         });
+
+        const profile = await Profile.findOne({where:{userId: user.id}})
+
+        const data = {
+          name: user.name,
+          username: profile.username ? profile.username : null,
+          avatar: profile.avatar ? profile.avatar : null,
+          bio: profile.bio ? profile.bio : null
+        }
     
         res.status(200).json(
-          { message: "Selamat Datang Di Reblue anda berhasil masuk", token});
+          { message: "Selamat Datang Di Reblue anda berhasil masuk", token, data});
           
       }   
       console.log(user);

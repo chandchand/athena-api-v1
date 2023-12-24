@@ -357,7 +357,7 @@ exports.getPosts = catchAsyncErrors(async (req, res, next) => {
 });
 
 exports.getMyPosts = catchAsyncErrors(async (req, res, next) => {
-    const userId = req.user;
+    const userId = req.user.id;
     try {
         // Pastikan userId memiliki nilai dan userId.id memiliki nilai
         if (!userId || !userId.id) {
@@ -476,7 +476,7 @@ exports.getMyPosts = catchAsyncErrors(async (req, res, next) => {
 // });
 
 exports.getOnePosts = catchAsyncErrors(async (req, res, next) => {
-    const userId = req.user;
+    const _userId = req.user.id;
     const id = req.params.id;
     try {
       const posts = await Posts.findOne({
@@ -521,8 +521,40 @@ exports.getOnePosts = catchAsyncErrors(async (req, res, next) => {
         where: { id: id },
       });
 
-      const isLiked = posts.likes.some(like => like.userId === userId)
-      const isMy = posts.userId === userId; 
+      // const isLiked = posts.likes.some(like => like.userId === userId)
+      // const isMy = posts.userId === userId; 
+      // console.log(isLiked, isMy);
+      // return
+      // const data = posts.map(post => {
+      //   const isLiked = post.likes.some(like => like.userId === userId)
+      //   const isMy = post.userId === userId; 
+      //   return {
+      //     id: post.id,
+      //     userId: post.userId,
+      //     imgContent: post.img ? post.img.url : null,
+      //     content: post.content,
+      //     uploadTime: new Date(post.createdAt).getTime(),
+      //     name: post.user.name,
+      //     username: post.user.profile.username,
+      //     avatar: post.user.profile.avatar ? post.user.profile.avatar.url : null,
+      //     likes: post.likes.map(like => ({ userId: like.userId })),
+      //     likeCount: post.likes.length,
+      //     comments: post.comments.map(comment => ({
+      //         id: comment.id,
+      //         userId: comment.userId,
+      //         text: comment.text,
+      //         img: comment.img ?  comment.img.url  : null,
+      //         user: {
+      //             id: comment.user.id,
+      //             name: comment.user.name,
+      //             avatar: post.user.profile.avatar ? post.user.profile.avatar.url : null,
+      //         },
+      //     })),
+      //     commentCount: post.comments.length,
+      //     isLiked: isLiked,
+      //     isMyPost: isMy,
+      //   }
+      // })
       const data = {
         
         id: posts.id,
@@ -547,8 +579,8 @@ exports.getOnePosts = catchAsyncErrors(async (req, res, next) => {
             },
         })),
         commentCount: posts.comments.length,
-        isLiked: isLiked,
-        isMyPost: isMy,
+        isLiked: posts.likes.some(like => like.userId === _userId),
+        isMyPost: posts.userId === _userId
       };
   
       resMsg.sendResponse(res, 200, true, 'success', data);

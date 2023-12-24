@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const message = new mongoose.Schema({
-  roomId: {
+  room: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'RoomChat',
     required: true,
@@ -10,22 +10,11 @@ const message = new mongoose.Schema({
     type: String,  // UUID pengguna dari PostgreSQL
     required: true,
   },
-  message: {
-    type: String,
-    required: true,
+  content: String,
+  seen: { 
+    type: Boolean, 
+    default: false 
   },
-  seenBy: [
-    {
-      user: {
-        type: String,  // UUID pengguna
-        required: true,
-      },
-      seenAt: {
-        type: Date,
-        default: null,
-      },
-    }
-  ],
   createdAt: {
     type: Date,
     default: Date.now,
