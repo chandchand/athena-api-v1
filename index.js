@@ -87,6 +87,9 @@ io.on('connection', (socket) => {
       // Emit the message to all members of the room
       io.to(roomId).emit('newMessage', message);
       console.log('Mengirim newMessage event:', message);
+
+      // Add this log to check the roomId
+      console.log('Room ID in sendMessage handler:', roomId);
     } catch (error) {
       console.error('Error handling sendMessage event:', error);
     }
