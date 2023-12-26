@@ -86,6 +86,7 @@ io.on('connection', (socket) => {
 
       // Emit the message to all members of the room
       io.to(roomId).emit('newMessage', message);
+      console.log('Mengirim newMessage event:', message);
     } catch (error) {
       console.error('Error handling sendMessage event:', error);
     }
@@ -99,6 +100,28 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     console.log('User disconnected');
   });
+});
+
+// Di bagian server Node.js
+io.on('reconnect', async (socket) => {
+  console.log('User reconnected');
+  
+  // Mendapatkan userId dan partnerId dari room yang sebelumnya dijoin
+  const { userId, partnerId } = socket.data;
+
+  try {
+    const room = await findOrCreateRoom(userId, partnerId);
+
+    io.to(socket.id).emit(room.newRoom ? 'roomCreated' : 'roomJoined', room.room._id);
+
+    socket.join(room.room._id);
+
+    const allMessages = await getAllMessages(room.room._id, userId, partnerId);
+    io.to(socket.id).emit('messages', allMessages);
+    console.log("all", allMessages);
+  } catch (error) {
+    console.error('Error handling reconnect event:', error);
+  }
 });
 
 
