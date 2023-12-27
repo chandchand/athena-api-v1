@@ -27,7 +27,6 @@ const io = socketIO(server, {
 io.on('connection', (socket) => {
   console.log('User connected');
 
-
   socket.on('sendMessage', async ({ roomId, senderId, content }) => {
     console.log('Received sendMessage event:', { roomId, senderId, content });
   
@@ -36,16 +35,14 @@ io.on('connection', (socket) => {
       const roomObjectId = new mongoose.Types.ObjectId(roomId);
       // Logic to save the message to MongoDB
       const message = new Message({ room: roomObjectId, sender: senderId, content });
-      await message.save();
-
-      // Update room to show that there are unread messages
-      await RoomChat.updateOne({ _id: roomId }, { $set: { hasUnreadMessages: true } });
-
       // Emit the message to all members of the room
-      io.to(roomId).emit('newMessage', {
+      io.to(roomId).emit('sendMessage', {
         sender: senderId,
         content: content,
       });
+
+      await message.save();
+      await RoomChat.updateOne({ _id: roomId }, { $set: { hasUnreadMessages: true } });
 
       console.log('Mengirim newMessage event:', message);
 
@@ -98,9 +95,6 @@ io.on('connection', (socket) => {
           ],
       }).populate('sender');
   }
-
-
-  
 
   socket.on('messages', (messages) => {
     console.log('Received messages in server:', messages);
