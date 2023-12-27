@@ -27,75 +27,90 @@ const io = socketIO(server, {
 io.on('connection', (socket) => {
   console.log('User connected');
 
-  socket.on('join', (data) => {
-    console.log('Received join event:', data);
+
+  socket.on('sendMessage', async ({ roomId, senderId, content }) => {
+    console.log('Received sendMessage event:', { roomId, senderId, content });
+  
     try {
-      // Ganti logika ini sesuai kebutuhan Anda
-      // Contoh: Mencari atau membuat ruangan (room)
-      const room = findOrCreateRoom(data.roomId);
+      // Create an ObjectId from the provided roomId
+      const roomObjectId = new mongoose.Types.ObjectId(roomId);
+      // Logic to save the message to MongoDB
+      const message = new Message({ room: roomObjectId, sender: senderId, content });
+      await message.save();
 
-      // Bergabung ke room
-      socket.join(room.roomId);
+      // Update room to show that there are unread messages
+      await RoomChat.updateOne({ _id: roomId }, { $set: { hasUnreadMessages: true } });
 
-      // Emit ke client yang bersangkutan bahwa room telah dibuat atau di-join
-      io.to(socket.id).emit(room.newRoom ? 'roomCreated' : 'roomJoined', room.roomId);
+      // Emit the message to all members of the room
+      io.to(roomId).emit('newMessage', {
+        sender: senderId,
+        content: content,
+      });
 
-      // Ambil semua pesan dalam room dan kirimkan ke client yang baru join
-      const allMessages = getAllMessages(room.roomId);
-      io.to(socket.id).emit('messages', allMessages);
-    } catch (error) {
-      console.error('Error handling join event:', error);
-    }
-  });
+      console.log('Mengirim newMessage event:', message);
 
-  // Fungsi untuk mencari atau membuat room baru
-  function findOrCreateRoom(roomId) {
-    // Ganti logika ini sesuai kebutuhan Anda
-    // Contoh: Mencari atau membuat ruangan (room)
-    const existingRoom = io.sockets.adapter.rooms.get(roomId);
-    
-    if (!existingRoom) {
-      // Jika room belum ada, buat room baru
-      return { roomId, newRoom: true };
-    }
-
-    // Jika room sudah ada, kirimkan informasi bahwa room telah di-join
-    return { roomId, newRoom: false };
-  }
-
-  // Fungsi untuk mendapatkan semua pesan dalam room
-  function getAllMessages(roomId) {
-    // Ganti logika ini sesuai kebutuhan Anda
-    // Contoh: Mengambil semua pesan dari database berdasarkan roomId
-    return Message.find({ room: roomId }).populate('sender');
-  }
-
-  socket.on('sendMessage', (data) => {
-    console.log('Received sendMessage event:', data);
-
-    try {
-      // Ganti logika ini sesuai kebutuhan Anda
-      // Contoh: Menyimpan pesan ke database
-      const message = saveMessage(data.roomId, data.senderId, data.content);
-
-      // Emit pesan ke semua anggota room
-      io.to(data.roomId).emit('newMessage', message);
-
-      // Tambahkan log untuk memeriksa roomId
-      console.log('Room ID in sendMessage handler:', data.roomId);
+      // Add this log to check the roomId
+      console.log('Room ID in sendMessage handler:', roomId);
     } catch (error) {
       console.error('Error handling sendMessage event:', error);
     }
   });
+  
+  socket.on('join', async ({ userId, partnerId }) => {
+    console.log('Received join event:', { userId, partnerId });
+    try {
+        const room = await findOrCreateRoom(userId, partnerId);
 
-  // Fungsi untuk menyimpan pesan ke database
-  function saveMessage(roomId, senderId, content) {
-    // Ganti logika ini sesuai kebutuhan Anda
-    // Contoh: Menyimpan pesan ke database
-    const message = new Message({ room: roomId, sender: senderId, content });
-    message.save();
-    return message;
+        io.to(socket.id).emit(room.newRoom ? 'roomCreated' : 'roomJoined', room.room._id);
+
+        socket.join(room.room._id);
+
+        const allMessages = await getAllMessages(room.room._id, userId, partnerId);
+        io.to(socket.id).emit('messages', allMessages);
+        console.log("all", allMessages);
+    } catch (error) {
+        console.error('Error handling join event:', error);
+    }
+  });
+
+  async function findOrCreateRoom(userId, partnerId) {
+      // Sort userId and partnerId to ensure consistent order
+      const sortedIds = [userId, partnerId].sort();
+      const room = await RoomChat.findOne({
+          users: { $elemMatch: { userId: sortedIds[0], partnerId: sortedIds[1] } },
+      });
+
+      if (!room) {
+          const newRoom = new RoomChat({ users: [{ userId: sortedIds[0], partnerId: sortedIds[1] }] });
+          await newRoom.save();
+          return { room: newRoom, newRoom: true };
+      }
+
+      return { room, newRoom: false };
   }
+
+  async function getAllMessages(roomId, userId, partnerId) {
+      return Message.find({
+          room: roomId,
+          $or: [
+              { sender: userId },
+              { sender: partnerId },
+          ],
+      }).populate('sender');
+  }
+
+
+  
+
+  socket.on('messages', (messages) => {
+    console.log('Received messages in server:', messages);
+    // Handle the messages, for example, log them
+  });
+
+  socket.on('newMessage', (messages) => {
+    console.log('Received newMessage in server:', messages);
+    // Handle the messages, for example, log them
+  });
 
   socket.on('disconnect', () => {
     console.log('User disconnected');
