@@ -85,7 +85,7 @@ io.on('connection', (socket) => {
       await RoomChat.updateOne({ _id: roomId }, { $set: { hasUnreadMessages: true } });
 
       // Emit the message to all members of the room
-      io.to(roomId).emit('newMessage', message);
+      io.to(roomId).emit('messages', message);
       console.log('Mengirim newMessage event:', message);
 
       // Add this log to check the roomId
@@ -104,29 +104,6 @@ io.on('connection', (socket) => {
     console.log('User disconnected');
   });
 });
-
-// Di bagian server Node.js
-io.on('reconnect', async (socket) => {
-  console.log('User reconnected');
-  
-  // Mendapatkan userId dan partnerId dari room yang sebelumnya dijoin
-  const { userId, partnerId } = socket.data;
-
-  try {
-    const room = await findOrCreateRoom(userId, partnerId);
-
-    io.to(socket.id).emit(room.newRoom ? 'roomCreated' : 'roomJoined', room.room._id);
-
-    socket.join(room.room._id);
-
-    const allMessages = await getAllMessages(room.room._id, userId, partnerId);
-    io.to(socket.id).emit('messages', allMessages);
-    console.log("all", allMessages);
-  } catch (error) {
-    console.error('Error handling reconnect event:', error);
-  }
-});
-
 
 
 const PORT = process.env.PORT || 8000;
