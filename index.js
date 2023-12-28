@@ -24,26 +24,26 @@ const io = socketIO(server, {
       origin: "*"
      }
 });
+
 io.on('connection', (socket) => {
   console.log('User connected');
 
   socket.on('sendMessage', async ({ roomId, senderId, content }) => {
     console.log('Received sendMessage event:', { roomId, senderId, content });
-  
+    
     try {
       // Create an ObjectId from the provided roomId
-      const roomObjectId = new mongoose.Types.ObjectId(roomId);
       // Logic to save the message to MongoDB
+      const roomObjectId = new mongoose.Types.ObjectId(roomId);
       const message = new Message({ room: roomObjectId, sender: senderId, content });
       // Emit the message to all members of the room
-      io.to(roomId).emit('sendMessage', {
-        sender: senderId,
-        content: content,
-      });
-
+      
       await message.save();
       await RoomChat.updateOne({ _id: roomId }, { $set: { hasUnreadMessages: true } });
-
+      
+      io.to(roomId.toString()).emit('sendMessage', message);
+      console.log("room id: ",roomId.toString());
+      // io.emit('sendMessage', message);
       console.log('Mengirim newMessage event:', message);
 
       // Add this log to check the roomId
@@ -56,17 +56,19 @@ io.on('connection', (socket) => {
   socket.on('join', async ({ userId, partnerId }) => {
     console.log('Received join event:', { userId, partnerId });
     try {
-        const room = await findOrCreateRoom(userId, partnerId);
-
-        io.to(socket.id).emit(room.newRoom ? 'roomCreated' : 'roomJoined', room.room._id);
-
-        socket.join(room.room._id);
-
-        const allMessages = await getAllMessages(room.room._id, userId, partnerId);
-        io.to(socket.id).emit('messages', allMessages);
-        console.log("all", allMessages);
+      const room = await findOrCreateRoom(userId, partnerId);
+  
+      io.to(socket.id).emit(room.newRoom ? 'roomCreated' : 'roomJoined', room.room._id);
+  
+      // Kirimkan pesan bergabung ke user tersebut saja
+      socket.join(room.room._id.toString());
+      console.log("roomID joined: ",room.room._id.toString());
+  
+      const allMessages = await getAllMessages(room.room._id, userId, partnerId);
+      io.to(socket.id).emit('messages', allMessages);
+      // console.log("all", allMessages);
     } catch (error) {
-        console.error('Error handling join event:', error);
+      console.error('Error handling join event:', error);
     }
   });
 
@@ -95,16 +97,6 @@ io.on('connection', (socket) => {
           ],
       }).populate('sender');
   }
-
-  socket.on('messages', (messages) => {
-    console.log('Received messages in server:', messages);
-    // Handle the messages, for example, log them
-  });
-
-  socket.on('newMessage', (messages) => {
-    console.log('Received newMessage in server:', messages);
-    // Handle the messages, for example, log them
-  });
 
   socket.on('disconnect', () => {
     console.log('User disconnected');
