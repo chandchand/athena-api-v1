@@ -77,7 +77,7 @@ io.on('connection', (socket) => {
   
     try {
       // Menggunakan $elemMatch untuk mencocokkan userId atau partnerId dalam array users
-      const roomList = await RoomChat.find({
+      const _roomList = await RoomChat.find({
         users: {
           $elemMatch: {
             $or: [
@@ -87,6 +87,22 @@ io.on('connection', (socket) => {
           }
         }
       });
+
+      const roomList = []
+
+      for(const room of _roomList){
+        const latesMessage = await Message.findOne({room: room._id}).sort({createdAt: -1}).limit(1) 
+        const roomData = {
+          _id: room._id,
+          users: room.users,
+          message: latesMessage.content,
+          seen: latesMessage.seen,
+          time: latesMessage.createdAt
+        }
+        roomList.push(roomData)
+      }
+
+      
   
       io.to(userId).emit('roomList', roomList);
       console.log('received roomList event', roomList);
