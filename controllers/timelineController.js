@@ -521,42 +521,15 @@ exports.getOnePosts = catchAsyncErrors(async (req, res, next) => {
         where: { id: id },
       });
 
-      // const isLiked = posts.likes.some(like => like.userId === userId)
-      // const isMy = posts.userId === userId; 
-      // console.log(isLiked, isMy);
-      // return
-      // const data = posts.map(post => {
-      //   const isLiked = post.likes.some(like => like.userId === userId)
-      //   const isMy = post.userId === userId; 
-      //   return {
-      //     id: post.id,
-      //     userId: post.userId,
-      //     imgContent: post.img ? post.img.url : null,
-      //     content: post.content,
-      //     uploadTime: new Date(post.createdAt).getTime(),
-      //     name: post.user.name,
-      //     username: post.user.profile.username,
-      //     avatar: post.user.profile.avatar ? post.user.profile.avatar.url : null,
-      //     likes: post.likes.map(like => ({ userId: like.userId })),
-      //     likeCount: post.likes.length,
-      //     comments: post.comments.map(comment => ({
-      //         id: comment.id,
-      //         userId: comment.userId,
-      //         text: comment.text,
-      //         img: comment.img ?  comment.img.url  : null,
-      //         user: {
-      //             id: comment.user.id,
-      //             name: comment.user.name,
-      //             avatar: post.user.profile.avatar ? post.user.profile.avatar.url : null,
-      //         },
-      //     })),
-      //     commentCount: post.comments.length,
-      //     isLiked: isLiked,
-      //     isMyPost: isMy,
-      //   }
-      // })
+      // Dapatkan pengikut pengguna saat ini
+      const currentUserFollowers = await Follows.findAll({
+        where: { followerId: _userId },
+      });
+
+      // Periksa apakah pengguna yang melakukan posting ada di dalam daftar pengikut
+      const isUserFollowed = currentUserFollowers.some(follower => follower.followingId === posts.userId);
+
       const data = {
-        
         id: posts.id,
         userId: posts.userId,
         imgContent: posts.img ? posts.img.url : null,
@@ -575,14 +548,15 @@ exports.getOnePosts = catchAsyncErrors(async (req, res, next) => {
             user: {
                 id: comment.user.id,
                 name: comment.user.name,
-                avatar: posts.user.profile.avatar ? posts.user.profile.avatar.url : null,
+                avatar: comment.user.profile.avatar ? comment.user.profile.avatar.url : null,
             },
         })),
         commentCount: posts.comments.length,
         isLiked: posts.likes.some(like => like.userId === _userId),
-        isMyPost: posts.userId === _userId
+        isMyPost: posts.userId === _userId,
+        isFollowed: isUserFollowed,
       };
-  
+        // Jika bukan postingan pengguna sendiri, lanjutkan dengan respons normal
       resMsg.sendResponse(res, 200, true, 'success', data);
     } catch (err) {
       res.status(500).json({ error: err.message });
