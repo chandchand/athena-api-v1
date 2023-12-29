@@ -430,51 +430,6 @@ exports.getMyPosts = catchAsyncErrors(async (req, res, next) => {
     }
 });
 
-
-// exports.getOnePosts = catchAsyncErrors(async (req, res, next) => {
-//     const id = req.params.id
-//     try {
-//         const data = await Posts.findOne({
-//             include: [
-//                 {
-//                     model: Users, // Asosiasi dengan User
-//                     as: 'user',
-//                     attributes: ['name'],
-//                     include: [
-//                         {
-//                           model: Profile, // Menyertakan model Profile
-//                           as: 'profile',
-//                           attributes: ['avatar'], // Pilih atribut yang ingin diambil
-//                         },
-//                       ], // Pilih atribut yang ingin diambil
-//                 },
-//                 {
-//                     model: Likes,
-//                     as: 'likes',
-//                     attributes: ['userId'],
-//                 },
-//                 {
-//                     model: Comments,
-//                     as: 'comments',
-//                     attributes: ['userId', 'text','img'],
-//                     include: [
-//                         {
-//                             model: Users,
-//                             as: 'user',
-//                             attributes: ['id', 'name'], // Pilih atribut yang ingin diambil
-//                         },
-//                     ],
-//                 },
-//             ],
-//             where: {id: id}
-//         });
-//         resMsg.sendResponse(res, 200, true, 'success', data);
-//     } catch (err) {
-//         res.status(500).json({ error: err.message });
-//         return next(new ErrorHandler('Kesalahan Server.', 500));
-//     }
-// });
-
 exports.getOnePosts = catchAsyncErrors(async (req, res, next) => {
     const _userId = req.user.id;
     const id = req.params.id;
