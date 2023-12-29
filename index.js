@@ -91,18 +91,18 @@ io.on('connection', (socket) => {
       const roomList = []
 
       for(const room of _roomList){
-        const latesMessage = await Message.findOne({room: room._id}).sort({createdAt: -1}).limit(1) 
+        const latestMessage = await Message.findOne({room: room._id}).sort({createdAt: -1}).limit(1) 
         const roomData = {
           _id: room._id,
-          users: room.users,
-          message: latesMessage.content,
-          seen: latesMessage.seen,
-          time: latesMessage.createdAt
+          latestMessage: latestMessage ? {
+            content: latestMessage.content,
+            sender: latestMessage.sender,
+            seen: latestMessage.seen,
+            createdAt: new Date(latestMessage.createdAt).getTime(),
+          } : null
         }
         roomList.push(roomData)
       }
-
-      
   
       io.to(userId).emit('roomList', roomList);
       console.log('received roomList event', roomList);
