@@ -3,7 +3,7 @@ const ErrorHandler = require("../utils/errorHandlers")
 const { sendOTP } = require('../middlewares/whatsapp');
 const { sendEmail } = require('../middlewares/mailer');
 const db = require ('../models')
-const {Profile, Users} = require("../models")
+const {Profile, Users, Follows} = require("../models")
 const resMsg = require('../utils/resMsg')
 const cloudinary = require("../utils/cloudinary");
 const { Op } = require("sequelize");
@@ -285,6 +285,7 @@ exports.getMyProfile = catchAsyncErrors(async (req, res, next) => {
 exports.getProfile = catchAsyncErrors(async (req, res, next) => {
   try {
     const id = req.params.id;
+    const _userId = req.user.id
     const profile = await Profile.findOne({
       where: {
         userId: id,
@@ -310,8 +311,14 @@ exports.getProfile = catchAsyncErrors(async (req, res, next) => {
     if (!profile) {
       return next(new ErrorHandler('Tidak Ada Data.', 404));
     }
-    // console.log({profile});
-    // return
+
+    // Dapatkan pengikut pengguna saat ini
+    const currentUserFollowers = await Follows.findAll({
+      where: { followerId: _userId },
+    });
+    // Periksa apakah pengguna yang melakukan posting ada di dalam daftar pengikut
+    const isUserFollowed = currentUserFollowers.some(follower => follower.followingId === profile.userId);
+    
     const data = {
       id: profile.id,
       userId: profile.userId,
@@ -325,6 +332,7 @@ exports.getProfile = catchAsyncErrors(async (req, res, next) => {
       phone: profile.User.phone_number,
       followers: profile.User.followers.length,
       following: profile.User.following.length,
+      isFollowed: isUserFollowed
     };
 
     resMsg.sendResponse(res, 200, true, 'success', data);

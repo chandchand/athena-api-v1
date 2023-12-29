@@ -71,8 +71,14 @@ exports.unfollow = catchAsyncErrors(async (req, res, next) =>{
   const followingId = req.params.id
 
   try {
+    const findUser = await Users.findByPk(followingId)
+    
+    if (!findUser) {
+      resMsg.sendResponse(res, 200, true, `User dengan nama ${findUser.name} tidak ada`, data);
+      return next(new ErrorHandler(`User dengan nama ${findUser.name} tidak ada`, 404));
+    }
 
-    const followEntry = await Follow.findOne({
+    const followEntry = await Follows.findOne({
       where: {
         followerId: followerId,
         followingId: followingId,
@@ -484,6 +490,7 @@ exports.getOnePosts = catchAsyncErrors(async (req, res, next) => {
       // Periksa apakah pengguna yang melakukan posting ada di dalam daftar pengikut
       const isUserFollowed = currentUserFollowers.some(follower => follower.followingId === posts.userId);
 
+
       const data = {
         id: posts.id,
         userId: posts.userId,
@@ -509,7 +516,7 @@ exports.getOnePosts = catchAsyncErrors(async (req, res, next) => {
         commentCount: posts.comments.length,
         isLiked: posts.likes.some(like => like.userId === _userId),
         isMyPost: posts.userId === _userId,
-        isFollowed: isUserFollowed,
+        isFollowed: isUserFollowed ? posts.userId === _userId: false,
       };
         // Jika bukan postingan pengguna sendiri, lanjutkan dengan respons normal
       resMsg.sendResponse(res, 200, true, 'success', data);
