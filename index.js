@@ -72,6 +72,30 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on('roomList', async ({ userId }) => {
+    console.log('get userId on event roomList:', userId);
+  
+    try {
+      // Menggunakan $elemMatch untuk mencocokkan userId atau partnerId dalam array users
+      const roomList = await RoomChat.find({
+        users: {
+          $elemMatch: {
+            $or: [
+              { userId: userId },
+              { partnerId: userId }
+            ]
+          }
+        }
+      });
+  
+      io.to(userId).emit('roomList', roomList);
+      console.log('received roomList event', roomList);
+    } catch (error) {
+      console.error('Error handling roomList event:', error);
+    }
+  });
+
+
   async function findOrCreateRoom(userId, partnerId) {
       // Sort userId and partnerId to ensure consistent order
       const sortedIds = [userId, partnerId].sort();
@@ -96,6 +120,19 @@ io.on('connection', (socket) => {
               { sender: partnerId },
           ],
       }).populate('sender');
+  }
+
+  async function getAllRooms({userId}) {
+    return RoomChat.find({ 
+      users: { 
+        $elemMatch: { 
+          $in: [
+            {userId: userId}, 
+            {partnerId: userId}
+          ] 
+        } 
+      } 
+    })
   }
 
   socket.on('disconnect', () => {
