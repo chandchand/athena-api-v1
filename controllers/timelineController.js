@@ -516,7 +516,7 @@ exports.getOnePosts = catchAsyncErrors(async (req, res, next) => {
         commentCount: posts.comments.length,
         isLiked: posts.likes.some(like => like.userId === _userId),
         isMyPost: posts.userId === _userId,
-        isFollowed: isUserFollowed ? posts.userId === _userId: false,
+        isFollowed: isUserFollowed,
       };
         // Jika bukan postingan pengguna sendiri, lanjutkan dengan respons normal
       resMsg.sendResponse(res, 200, true, 'success', data);

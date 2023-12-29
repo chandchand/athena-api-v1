@@ -332,7 +332,8 @@ exports.getProfile = catchAsyncErrors(async (req, res, next) => {
       phone: profile.User.phone_number,
       followers: profile.User.followers.length,
       following: profile.User.following.length,
-      isFollowed: isUserFollowed
+      isMyProf: profile.userId === _userId,
+      isFollowed: isUserFollowed,
     };
 
     resMsg.sendResponse(res, 200, true, 'success', data);
