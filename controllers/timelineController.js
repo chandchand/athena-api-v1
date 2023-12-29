@@ -366,7 +366,7 @@ exports.getMyPosts = catchAsyncErrors(async (req, res, next) => {
     const userId = req.user.id;
     try {
         // Pastikan userId memiliki nilai dan userId.id memiliki nilai
-        if (!userId || !userId.id) {
+        if (!userId) {
             return resMsg.sendResponse(res, 400, false, 'User ID tidak valid', null);
         }
 
@@ -402,7 +402,7 @@ exports.getMyPosts = catchAsyncErrors(async (req, res, next) => {
                     ],
                 },
             ],
-            where: { userId: userId.id }
+            where: { userId: userId }
         });
 
         // Jika user tidak memiliki postingan
