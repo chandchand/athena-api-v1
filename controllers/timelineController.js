@@ -472,7 +472,7 @@ exports.getOnePosts = catchAsyncErrors(async (req, res, next) => {
                     {
                       model: Profile,
                       as: 'profile',
-                      attributes: ['avatar'],
+                      attributes: ['avatar','username'],
                     },
                   ],
               },
@@ -510,6 +510,7 @@ exports.getOnePosts = catchAsyncErrors(async (req, res, next) => {
             user: {
                 id: comment.user.id,
                 name: comment.user.name,
+                username: comment.user.profile.username,
                 avatar: comment.user.profile.avatar ? comment.user.profile.avatar.url : null,
             },
         })),
