@@ -104,7 +104,7 @@ io.on('connection', (socket) => {
         roomList.push(roomData)
       }
   
-      io.to(userId).emit('roomList', roomList);
+      io.to(userId.toString()).emit('roomList', roomList);
       console.log('received roomList event', roomList);
     } catch (error) {
       console.error('Error handling roomList event:', error);
@@ -136,19 +136,6 @@ io.on('connection', (socket) => {
               { sender: partnerId },
           ],
       }).populate('sender');
-  }
-
-  async function getAllRooms({userId}) {
-    return RoomChat.find({ 
-      users: { 
-        $elemMatch: { 
-          $in: [
-            {userId: userId}, 
-            {partnerId: userId}
-          ] 
-        } 
-      } 
-    })
   }
 
   socket.on('disconnect', () => {
