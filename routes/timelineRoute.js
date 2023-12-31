@@ -20,6 +20,8 @@ router.route('/my_posts')
 
 router.route('/posts/:id')
     .get(isAuthenticated, authorizeRole(isUser),Timeline.getOnePosts)
+    .put(isAuthenticated, authorizeRole(isUser), uploads.single('img'),Timeline.editPost)
+    .delete(isAuthenticated, authorizeRole(isUser),Timeline.deletePost)
 
 router.route('/like/:postId')
     .post(isAuthenticated, authorizeRole(isUser),Timeline.like)

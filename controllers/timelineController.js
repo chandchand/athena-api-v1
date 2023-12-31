@@ -136,37 +136,63 @@ exports.createPost = catchAsyncErrors(async (req, res, next) => {
 })
 
 exports.editPost = catchAsyncErrors(async (req, res, next) => {
-    const {content} = req.body
-    const userId = req.user
+  const { content } = req.body;
+  const id = req.params.id;
 
-    try {
+  try {
+      let imagePath = '';
 
-        let imagePath = '';
-        
-        if (req.file) {
-          const uploadedImage = await cloudinary.uploader.upload(req.file.path, { // Perubahan di sini
-            folder: "post",
+      if (req.file) {
+          const uploadedImage = await cloudinary.uploader.upload(req.file.path, {
+              folder: "post",
           });
-      
+
           imagePath = {
-            public_id: uploadedImage.public_id,
-            url: uploadedImage.secure_url
-          };         
-        }
-    
+              public_id: uploadedImage.public_id,
+              url: uploadedImage.secure_url
+          };
+      }
 
-        const data = await Posts.create({
-            userId: userId.id,
-            img: imagePath,
-            content,
-            createdAt: new Date()
-        })
-        resMsg.sendResponse(res, 200, true, 'success', data);
+      console.log(content);
+      console.log(id);
+      // Periksa apakah post dengan ID tersebut ada
+      const existingPost = await Posts.findByPk(id);
 
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-        return next(new ErrorHandler('Kesalahan Server.', 500));
-    }
+      if (!existingPost) {
+          return res.status(404).json({ error: 'Post tidak ditemukan' });
+      }
+
+      // Lakukan update post
+      const data = await existingPost.update({
+          img: imagePath || existingPost.img, // Gunakan gambar lama jika tidak ada gambar baru
+          content,
+          // Tidak perlu mengatur createdAt secara manual
+      });
+
+      resMsg.sendResponse(res, 200, true, 'success edit post', data);
+  } catch (err) {
+      res.status(500).json({ error: err.message });
+      return next(new ErrorHandler('Kesalahan Server.', 500));
+  }
+});
+
+
+exports.deletePost = catchAsyncErrors(async (req, res, next) => {
+  const id = req.params.id
+
+  try {
+      const existingPost = await Posts.findByPk(id);
+
+      if (!existingPost) {
+          return res.status(404).json({ error: 'Post tidak ditemukan' });
+      }
+      const data = await Posts.destroy({where: {id:id}})
+      resMsg.sendResponse(res, 200, true, 'success data deleted', data);
+
+  } catch (err) {
+      res.status(500).json({ error: err.message });
+      return next(new ErrorHandler('Kesalahan Server.', 500));
+  }
 })
 
 exports.like = catchAsyncErrors(async (req, res, next) => {
