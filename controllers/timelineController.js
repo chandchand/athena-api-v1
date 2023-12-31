@@ -181,13 +181,26 @@ exports.deletePost = catchAsyncErrors(async (req, res, next) => {
   const id = req.params.id
 
   try {
-      const existingPost = await Posts.findByPk(id);
+        // Temukan postingan yang akan dihapus
+      const postToDelete = await Posts.findByPk(id);
 
-      if (!existingPost) {
-          return res.status(404).json({ error: 'Post tidak ditemukan' });
+      if (!postToDelete) {
+          return res.status(404).json({ error: 'Postingan tidak ditemukan' });
       }
-      const data = await Posts.destroy({where: {id:id}})
-      resMsg.sendResponse(res, 200, true, 'success data deleted', data);
+
+      // Hapus semua komentar terkait dengan postingan
+      await Comments.destroy({
+          where: { postId: postToDelete.id },
+      });
+
+      // Hapus semua likes terkait dengan postingan
+      await Likes.destroy({
+          where: { postId: postToDelete.id },
+      });
+
+      // Hapus postingan itu sendiri
+      await postToDelete.destroy();
+      resMsg.sendResponse(res, 200, true, 'success data deleted');
 
   } catch (err) {
       res.status(500).json({ error: err.message });
