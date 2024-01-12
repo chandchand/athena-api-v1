@@ -5,7 +5,7 @@ const db = require ('../models')
 const Profile = require("../models/profile")(db.sequelize)
 const {Users, Posts, Likes, Comments, Follows } = require("../models");
 const cloudinary = require("../utils/cloudinary");
-const { Op } = require("sequelize")
+const { Op, Sequelize } = require("sequelize");
 
 exports.searchUsers = catchAsyncErrors(async (req, res, next) => {
   const { keywords } = req.query;
@@ -162,73 +162,71 @@ exports.editPost = catchAsyncErrors(async (req, res, next) => {
   const id = req.params.id;
 
   try {
-      let imagePath = '';
+    let imagePath = "";
 
-      if (req.file) {
-          const uploadedImage = await cloudinary.uploader.upload(req.file.path, {
-              folder: "post",
-          });
-
-          imagePath = {
-              public_id: uploadedImage.public_id,
-              url: uploadedImage.secure_url
-          };
-      }
-
-      console.log(content);
-      console.log(id);
-      // Periksa apakah post dengan ID tersebut ada
-      const existingPost = await Posts.findByPk(id);
-
-      if (!existingPost) {
-          return res.status(404).json({ error: 'Post tidak ditemukan' });
-      }
-
-      // Lakukan update post
-      const data = await existingPost.update({
-          img: imagePath || existingPost.img, // Gunakan gambar lama jika tidak ada gambar baru
-          content,
-          // Tidak perlu mengatur createdAt secara manual
+    if (req.file) {
+      const uploadedImage = await cloudinary.uploader.upload(req.file.path, {
+        folder: "post",
       });
 
-      resMsg.sendResponse(res, 200, true, 'success edit post', data);
+      imagePath = {
+        public_id: uploadedImage.public_id,
+        url: uploadedImage.secure_url,
+      };
+    }
+
+    console.log(content);
+    console.log(id);
+    // Periksa apakah post dengan ID tersebut ada
+    const existingPost = await Posts.findByPk(id);
+
+    if (!existingPost) {
+      return res.status(404).json({ error: "Post tidak ditemukan" });
+    }
+
+    // Lakukan update post
+    const data = await existingPost.update({
+      img: imagePath || existingPost.img, // Gunakan gambar lama jika tidak ada gambar baru
+      content,
+      // Tidak perlu mengatur createdAt secara manual
+    });
+
+    resMsg.sendResponse(res, 200, true, "success edit post", data);
   } catch (err) {
-      res.status(500).json({ error: err.message });
-      return next(new ErrorHandler('Kesalahan Server.', 500));
+    res.status(500).json({ error: err.message });
+    return next(new ErrorHandler("Kesalahan Server.", 500));
   }
 });
 
-
 exports.deletePost = catchAsyncErrors(async (req, res, next) => {
-  const id = req.params.id
+  const id = req.params.id;
 
   try {
-        // Temukan postingan yang akan dihapus
-      const postToDelete = await Posts.findByPk(id);
+    // Temukan postingan yang akan dihapus
+    const postToDelete = await Posts.findByPk(id);
 
-      if (!postToDelete) {
-          return res.status(404).json({ error: 'Postingan tidak ditemukan' });
-      }
+    if (!postToDelete) {
+      return res.status(404).json({ error: "Postingan tidak ditemukan" });
+    }
 
-      // Hapus semua komentar terkait dengan postingan
-      await Comments.destroy({
-          where: { postId: postToDelete.id },
-      });
+    // Hapus semua komentar terkait dengan postingan
+    await Comments.destroy({
+      where: { postId: postToDelete.id },
+    });
 
-      // Hapus semua likes terkait dengan postingan
-      await Likes.destroy({
-          where: { postId: postToDelete.id },
-      });
+    // Hapus semua likes terkait dengan postingan
+    await Likes.destroy({
+      where: { postId: postToDelete.id },
+    });
 
-      // Hapus postingan itu sendiri
-      await postToDelete.destroy();
-      resMsg.sendResponse(res, 200, true, 'success data deleted');
-
+    // Hapus postingan itu sendiri
+    await postToDelete.destroy();
+    resMsg.sendResponse(res, 200, true, "success data deleted");
   } catch (err) {
-      res.status(500).json({ error: err.message });
-      return next(new ErrorHandler('Kesalahan Server.', 500));
+    res.status(500).json({ error: err.message });
+    return next(new ErrorHandler("Kesalahan Server.", 500));
   }
-})
+});
 
 exports.like = catchAsyncErrors(async (req, res, next) => {
   const postId = req.params.postId;
@@ -364,7 +362,28 @@ exports.getPosts = catchAsyncErrors(async (req, res, next) => {
   const userId = req.user.id;
 
   try {
+    followingUsers = await Follows.findAll({
+      where: { followerId: userId },
+      attributes: ["followingId"],
+    });
+
+    const userAndFollowingIds = [
+      ...followingUsers.map((user) => user.followingId),
+      userId,
+    ];
+
+    const randomThreshold = Math.floor(Math.random() * 20) + 1
+    console.log("random number ", randomThreshold);
+
     const posts = await Posts.findAll({
+      where: {
+        [Op.or]: [
+          { userId: userAndFollowingIds },
+          Sequelize.literal(
+            `(SELECT COUNT(*) FROM "Likes" WHERE "Likes"."postId" = "Posts"."id") >= ${randomThreshold}`
+          ),
+        ],
+      },
       include: [
         {
           model: Users, // Asosiasi dengan User
@@ -403,7 +422,10 @@ exports.getPosts = catchAsyncErrors(async (req, res, next) => {
           ],
         },
       ],
+      order: [["createdAt", "DESC"]],
     });
+
+    // const filteredPosts = posts.filter((post) => post.likes.length >= 1);
 
     const data = posts.map((post) => {
       const isLiked = post.likes.some((like) => like.userId === userId);
