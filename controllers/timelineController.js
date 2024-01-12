@@ -162,62 +162,6 @@ exports.editPost = catchAsyncErrors(async (req, res, next) => {
   const id = req.params.id;
 
   try {
-    let imagePath = "";
-
-    if (req.file) {
-      const uploadedImage = await cloudinary.uploader.upload(req.file.path, {
-        folder: "post",
-      });
-
-      imagePath = {
-        public_id: uploadedImage.public_id,
-        url: uploadedImage.secure_url,
-      };
-    }
-
-    const existingPost = await Posts.findByPk(id);
-
-    if (!existingPost) {
-      return res.status(404).json({ error: "Post tidak ditemukan" });
-    }
-
-    const data = await existingPost.update({
-      img: imagePath || existingPost.img,
-      content,
-    });
-
-    resMsg.sendResponse(res, 200, true, "success edit post", data);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-    return next(new ErrorHandler("Kesalahan Server.", 500));
-  }
-});
-
-exports.deletePost = catchAsyncErrors(async (req, res, next) => {
-  const id = req.params.id;
-
-  try {
-    const postToDelete = await Posts.findByPk(id);
-
-    if (!postToDelete) {
-      return res.status(404).json({ error: "Postingan tidak ditemukan" });
-    }
-
-    await Comments.destroy({
-      where: { postId: postToDelete.id },
-    });
-
-    await Likes.destroy({
-      where: { postId: postToDelete.id },
-    });
-
-    await postToDelete.destroy();
-    resMsg.sendResponse(res, 200, true, "success data deleted");
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-    return next(new ErrorHandler("Kesalahan Server.", 500));
-  }
-});
       let imagePath = '';
 
       if (req.file) {
@@ -488,11 +432,6 @@ exports.getPosts = catchAsyncErrors(async (req, res, next) => {
 });
 
 exports.getMyPosts = catchAsyncErrors(async (req, res, next) => {
-  const userId = req.user.id;
-  try {
-    // Pastikan userId memiliki nilai dan userId.id memiliki nilai
-    if (!userId) {
-      return resMsg.sendResponse(res, 400, false, "User ID tidak valid", null);
     const userId = req.user.id;
     try {
         // Pastikan userId memiliki nilai dan userId.id memiliki nilai
@@ -565,87 +504,9 @@ exports.getMyPosts = catchAsyncErrors(async (req, res, next) => {
         return next(new ErrorHandler('Kesalahan Server.', 500));
     }
 
-    const posts = await Posts.findAll({
-      include: [
-        {
-          model: Users,
-          as: "user",
-          attributes: ["name"],
-          include: [
-            {
-              model: Profile,
-              as: "profile",
-              attributes: ["avatar", "username"],
-            },
-          ],
-        },
-        {
-          model: Likes,
-          as: "likes",
-          attributes: ["userId"],
-        },
-        {
-          model: Comments,
-          as: "comments",
-          attributes: ["userId", "text"],
-          include: [
-            {
-              model: Users,
-              as: "user",
-              attributes: ["id", "name"],
-            },
-          ],
-        },
-      ],
-      where: { userId: userId },
-    });
-
-    // Jika user tidak memiliki postingan
-    if (!posts.length) {
-      return resMsg.sendResponse(res, 200, true, "success", []);
-    }
-
-    const data = posts.map((post) => {
-      const isLiked = post.likes.some((like) => like.userId === userId);
-      const isMy = post.userId === userId;
-      return {
-        id: post.id,
-        userId: post.userId,
-        img: post.img.url,
-        content: post.content,
-        uploadTime: new Date(post.createdAt).getTime(),
-        name: post.user.name,
-        username: post.user.profile.username,
-        avatar: post.user.profile.avatar ? post.user.profile.avatar.url : null,
-        likeCount: post.likes.length,
-        comments: post.comments.length,
-        isLiked: isLiked,
-        isMyPost: isMy,
-      };
-    });
-
-    resMsg.sendResponse(res, 200, true, "success", data);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-    return next(new ErrorHandler("Kesalahan Server.", 500));
-  }
 });
 
 exports.getOnePosts = catchAsyncErrors(async (req, res, next) => {
-  const _userId = req.user.id;
-  const id = req.params.id;
-  try {
-    const posts = await Posts.findOne({
-      include: [
-        {
-          model: Users,
-          as: "user",
-          attributes: ["name"],
-          include: [
-            {
-              model: Profile,
-              as: "profile",
-              attributes: ["avatar", "username"],
     const _userId = req.user.id;
     const id = req.params.id;
     try {
@@ -690,67 +551,6 @@ exports.getOnePosts = catchAsyncErrors(async (req, res, next) => {
         ],
         where: { id: id },
       });
-
-      // Dapatkan pengikut pengguna saat ini
-      const currentUserFollowers = await Follows.findAll({
-        where: { followerId: _userId },
-      });
-
-      // Periksa apakah pengguna yang melakukan posting ada di dalam daftar pengikut
-      const isUserFollowed = currentUserFollowers.some(follower => follower.followingId === posts.userId);
-
-
-      const data = {
-        id: posts.id,
-        userId: posts.userId,
-        imgContent: posts.img ? posts.img.url : null,
-        content: posts.content,
-        uploadTime: new Date(posts.createdAt).getTime(),
-        name: posts.user.name,
-        username: posts.user.profile.username,
-        avatar: posts.user.profile.avatar ? posts.user.profile.avatar.url : null,
-        likes: posts.likes.map(like => ({ userId: like.userId })),
-        likeCount: posts.likes.length,
-        comments: posts.comments.map(comment => ({
-            id: comment.id,
-            userId: comment.userId,
-            text: comment.text,
-            img: comment.img ?  comment.img.url  : null,
-            user: {
-                id: comment.user.id,
-                name: comment.user.name,
-                username: comment.user.profile.username,
-                avatar: comment.user.profile.avatar ? comment.user.profile.avatar.url : null,
-            },
-          ],
-        },
-        {
-          model: Likes,
-          as: "likes",
-          attributes: ["userId"],
-        },
-        {
-          model: Comments,
-          as: "comments",
-          attributes: ["id", "userId", "text", "img"],
-          include: [
-            {
-              model: Users,
-              as: "user",
-              attributes: ["id", "name"],
-              include: [
-                {
-                  model: Profile,
-                  as: "profile",
-                  attributes: ["avatar", "username"],
-                },
-              ],
-            },
-          ],
-        },
-      ],
-      where: { id: id },
-    });
 
     // Dapatkan pengikut pengguna saat ini
     const currentUserFollowers = await Follows.findAll({
