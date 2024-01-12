@@ -52,6 +52,11 @@ const resendOTP = async (user) => {
   }
 };
 
+function generateRandomNumber() {
+  return Math.floor(Math.random() * 9000) + 1000;
+}
+    
+
 exports.register = catchAsyncErrors(async (req, res, next) => {
   let transaction;
   try {
@@ -82,11 +87,17 @@ exports.register = catchAsyncErrors(async (req, res, next) => {
 
     const otpMessage = `Halo ${name} Terimakasih sudah mendaftar di Athena silahkan melakukan verifikasi OTP terlebih dahulu., kode OTP Anda adalah: ${otp}`;
     await sendOTP(phone_number, otpMessage);
-
+    
+    // Menghasilkan angka acak dan menambahkan prefiks 'user'
+    const randomNumber = generateRandomNumber();
+    const userRandomNumber = 'user' + randomNumber;
     // Buat data user profile
     const profile = await Profile.create({
-      userId: user.id, // Menggunakan id dari user yang baru dibuat
+      userId: user.id,
+      username: userRandomNumber // Menggunakan id dari user yang baru dibuat
     }, { transaction });
+
+    console.log(profile);
 
     res.status(201).json({
       success: true,
