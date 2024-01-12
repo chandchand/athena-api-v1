@@ -72,50 +72,54 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('roomList', async (userId) => {
-    console.log('get userId on event roomList:', userId);
-  
+  socket.on("roomList", async (userId) => {
+    console.log("get userId on event roomList:", userId);
+
     try {
-      // Menggunakan $elemMatch untuk mencocokkan userId atau partnerId dalam array users
       const _roomList = await RoomChat.find({
         users: {
           $elemMatch: {
-            $or: [
-              { userId: userId },
-              { partnerId: userId }
-            ]
-          }
-        }
+            $or: [{ userId: userId }, { partnerId: userId }],
+          },
+        },
       });
 
-      const roomList = []
+      const roomList = [];
 
       for (const room of _roomList) {
-        // Mencari pesan terbaru untuk setiap ruangan
-        const latestMessage = await Message.findOne({ room: room._id }).sort({ createdAt: -1 }).limit(1);
-  
-        // Hanya masukkan ruangan yang memiliki pesan
-        if (latestMessage) {
-          const roomData = {
-            _id: room._id,
-            latestMessage: {
-              content: latestMessage.content,
-              sender: latestMessage.sender.toString(),
-              seen: latestMessage.seen,
-              createdAt: new Date(latestMessage.createdAt).getTime(),
-            }
-          }
-          roomList.push(roomData);
-        }
+        const latestMessage = await Message.findOne({ room: room._id })
+          .sort({ createdAt: -1 })
+          .limit(1);
+
+        const user = room.users.find((user) => user.userId === userId);
+        const partnerId = user
+          ? user.partnerId
+          : room.users.find((user) => user.partnerId === userId).userId;
+
+        const roomData = {
+          _id: room._id,
+          latestMessage: latestMessage
+            ? {
+                content: latestMessage.content,
+                sender: latestMessage.sender.toString(),
+                seen: latestMessage.seen,
+                createdAt: new Date(latestMessage.createdAt).getTime(),
+              }
+            : null,
+          userId: userId,
+          partnerId: partnerId,
+        };
+        roomList.push(roomData);
       }
-  
-      io.emit('roomList', roomList);
-      console.log('received ID roomList event', userId.toString());
-      console.log('received roomList event', roomList);
+
+      io.emit("roomList", roomList);
+      console.log("received ID roomList event", userId.toString());
+      console.log("received roomList event", roomList);
     } catch (error) {
-      console.error('Error handling roomList event:', error);
+      console.error("Error handling roomList event:", error);
     }
   });
+  
 
 
   async function findOrCreateRoom(userId, partnerId) {
