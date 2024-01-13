@@ -72,7 +72,7 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on("roomList", async (userId) => {
+  socket.on("latestMsg", async (userId) => {
     console.log("get userId on event roomList:", userId);
 
     try {
@@ -84,37 +84,29 @@ io.on('connection', (socket) => {
         },
       });
 
-      const roomList = [];
+      const latestMessage = [];
 
       for (const room of _roomList) {
-        const latestMessage = await Message.findOne({ room: room._id })
+        const _latestMessage = await Message.findOne({ room: room._id })
           .sort({ createdAt: -1 })
           .limit(1);
 
-        const user = room.users.find((user) => user.userId === userId);
-        const partnerId = user
-          ? user.partnerId
-          : room.users.find((user) => user.partnerId === userId).userId;
-
-        const roomData = {
-          _id: room._id,
-          latestMessage: latestMessage
+        const messageData = {
+          latestMessage: _latestMessage
             ? {
-                content: latestMessage.content,
-                sender: latestMessage.sender.toString(),
-                seen: latestMessage.seen,
-                createdAt: new Date(latestMessage.createdAt).getTime(),
+                content: _latestMessage.content,
+                sender: _latestMessage.sender.toString(),
+                seen: _latestMessage.seen,
+                time: new Date(_latestMessage.createdAt).getTime(),
               }
             : null,
-          userId: userId,
-          partnerId: partnerId,
         };
-        roomList.push(roomData);
+        latestMessage.push(messageData);
       }
 
-      io.emit("roomList", roomList);
+      io.emit("latestMsg", latestMessage);
       console.log("received ID roomList event", userId.toString());
-      console.log("received roomList event", roomList);
+      console.log("received roomList event", latestMessage);
     } catch (error) {
       console.error("Error handling roomList event:", error);
     }
