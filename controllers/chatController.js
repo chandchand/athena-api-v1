@@ -9,9 +9,9 @@ const cloudinary = require("../utils/cloudinary");
 const { Op } = require("sequelize");
 const RoomChat = require("../models/chat/roomModel");
 const Message = require("../models/chat/messageModel");
-const catchAsyncError = require("../middlewares/catchAsyncError");
+const emitLatestMessage = require("../index");
 
-exports.roomList = catchAsyncError(async (req, res, next) => {
+exports.roomList = catchAsyncErrors(async (req, res, next) => {
   try {
     const userId = req.user.id;
 
@@ -50,6 +50,12 @@ exports.roomList = catchAsyncError(async (req, res, next) => {
       };
 
       roomList.push(data);
+    }
+
+    for (const roomIds of roomList.roomId) {
+      await emitLatestMessage(roomIds.toString());
+      const _roomIds = roomIds.toString();
+      console.log("roomIds", { _roomIds });
     }
     resMsg.sendResponse(res, 200, true, "success", roomList);
     // console.log("roomlist = ", _roomList.users);

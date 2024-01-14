@@ -25,125 +25,140 @@ const io = socketIO(server, {
      }
 });
 
-io.on('connection', (socket) => {
-  console.log('User connected');
+io.on("connection", (socket) => {
+  console.log("User connected");
 
-  socket.on('sendMessage', async ({ roomId, senderId, content }) => {
-    console.log('Received sendMessage event:', { roomId, senderId, content });
-    
+  socket.on("sendMessage", async ({ roomId, senderId, content }) => {
+    console.log("Received sendMessage event:", { roomId, senderId, content });
+
     try {
       // Create an ObjectId from the provided roomId
       // Logic to save the message to MongoDB
       const roomObjectId = new mongoose.Types.ObjectId(roomId);
-      const message = new Message({ room: roomObjectId, sender: senderId, content });
+      const message = new Message({
+        room: roomObjectId,
+        sender: senderId,
+        content,
+      });
       // Emit the message to all members of the room
-      
+
       await message.save();
-      await RoomChat.updateOne({ _id: roomId }, { $set: { hasUnreadMessages: true } });
-      
-      io.to(roomId.toString()).emit('sendMessage', message);
-      console.log("room id: ",roomId.toString());
+      await RoomChat.updateOne(
+        { _id: roomId },
+        { $set: { hasUnreadMessages: true } }
+      );
+      await emitLatestMessage(roomId);
+
+      io.to(roomId.toString()).emit("sendMessage", message);
+
+      console.log("room id: ", roomId.toString());
       // io.emit('sendMessage', message);
-      console.log('Mengirim newMessage event:', message);
+      console.log("Mengirim newMessage event:", message);
 
       // Add this log to check the roomId
-      console.log('Room ID in sendMessage handler:', roomId);
+      console.log("Room ID in sendMessage handler:", roomId);
     } catch (error) {
-      console.error('Error handling sendMessage event:', error);
+      console.error("Error handling sendMessage event:", error);
     }
   });
-  
-  socket.on('join', async ({ userId, partnerId }) => {
-    console.log('Received join event:', { userId, partnerId });
+
+  socket.on("join", async ({ userId, partnerId }) => {
+    console.log("Received join event:", { userId, partnerId });
     try {
       const room = await findOrCreateRoom(userId, partnerId);
-  
-      io.to(socket.id).emit(room.newRoom ? 'roomCreated' : 'roomJoined', room.room._id);
-  
+
+      io.to(socket.id).emit(
+        room.newRoom ? "roomCreated" : "roomJoined",
+        room.room._id
+      );
+
       // Kirimkan pesan bergabung ke user tersebut saja
       socket.join(room.room._id.toString());
-      console.log("roomID joined: ",room.room._id.toString());
-  
-      const allMessages = await getAllMessages(room.room._id, userId, partnerId);
-      io.to(socket.id).emit('messages', allMessages);
+      console.log("roomID joined: ", room.room._id.toString());
+
+      const allMessages = await getAllMessages(
+        room.room._id,
+        userId,
+        partnerId
+      );
+      io.to(socket.id).emit("messages", allMessages);
+      await emitLatestMessage(room.room._id.toString());
       // console.log("all", allMessages);
     } catch (error) {
-      console.error('Error handling join event:', error);
+      console.error("Error handling join event:", error);
     }
   });
 
-  socket.on("latestMsg", async (userId) => {
-    console.log("get userId on event roomList:", userId);
-
+  socket.on("getLatestMessages", async ({ roomIds }) => {
+    console.log("Received getLatestMessages event:", { roomIds });
     try {
-      const _roomList = await RoomChat.find({
-        users: {
-          $elemMatch: {
-            $or: [{ userId: userId }, { partnerId: userId }],
-          },
-        },
-      });
-
-      const latestMessage = [];
-
-      for (const room of _roomList) {
-        const _latestMessage = await Message.findOne({ room: room._id })
-          .sort({ createdAt: -1 })
-          .limit(1);
-
-        const messageData = {
-          latestMessage: _latestMessage
-            ? {
-                content: _latestMessage.content,
-                sender: _latestMessage.sender.toString(),
-                seen: _latestMessage.seen,
-                time: new Date(_latestMessage.createdAt).getTime(),
-              }
-            : null,
-        };
-        latestMessage.push(messageData);
+      for (const roomId of roomIds) {
+        await emitLatestMessage(roomId);
       }
-
-      io.emit("latestMsg", latestMessage);
-      console.log("received ID roomList event", userId.toString());
-      console.log("received roomList event", latestMessage);
     } catch (error) {
-      console.error("Error handling roomList event:", error);
+      console.error("Error handling getLatestMessages event:", error);
     }
   });
-  
 
+  async function emitLatestMessage(roomId) {
+    try {
+      const latestMessage = await Message.findOne({ room: roomId })
+        .sort({ createdAt: -1 })
+        .populate("sender");
+
+      if (latestMessage) {
+        const formattedLatestMessage = {
+          _id: latestMessage._id,
+          room: latestMessage.room,
+          sender: latestMessage.sender,
+          content: latestMessage.content,
+          seen: latestMessage.seen,
+          createdAt: latestMessage.createdAt,
+          // Tambahkan atribut time dengan nilai sesuai kebutuhan
+          time: latestMessage.createdAt.toLocaleTimeString(), // Atau gunakan format waktu yang diinginkan
+        };
+
+        io.to(roomId).emit("latestMessage", formattedLatestMessage);
+        console.log("roomId yg didapatkan", roomId);
+        console.log("data", formattedLatestMessage);
+      }
+    } catch (error) {
+      console.error("Error emitting latestMessage event:", error);
+    }
+  }
+
+  module.exports = emitLatestMessage;
 
   async function findOrCreateRoom(userId, partnerId) {
-      // Sort userId and partnerId to ensure consistent order
-      const sortedIds = [userId, partnerId].sort();
-      const room = await RoomChat.findOne({
-          users: { $elemMatch: { userId: sortedIds[0], partnerId: sortedIds[1] } },
+    // Sort userId and partnerId to ensure consistent order
+    const sortedIds = [userId, partnerId].sort();
+    const room = await RoomChat.findOne({
+      users: { $elemMatch: { userId: sortedIds[0], partnerId: sortedIds[1] } },
+    });
+
+    if (!room) {
+      const newRoom = new RoomChat({
+        users: [{ userId: sortedIds[0], partnerId: sortedIds[1] }],
       });
+      await newRoom.save();
+      return { room: newRoom, newRoom: true };
+    }
 
-      if (!room) {
-          const newRoom = new RoomChat({ users: [{ userId: sortedIds[0], partnerId: sortedIds[1] }] });
-          await newRoom.save();
-          return { room: newRoom, newRoom: true };
-      }
-
-      return { room, newRoom: false };
+    return { room, newRoom: false };
   }
 
   async function getAllMessages(roomId, userId, partnerId) {
-      return Message.find({
-          room: roomId,
-          $or: [
-              { sender: userId },
-              { sender: partnerId },
-          ],
-      }).populate('sender');
+    return Message.find({
+      room: roomId,
+      $or: [{ sender: userId }, { sender: partnerId }],
+    }).populate("sender");
   }
 
-  socket.on('disconnect', () => {
-    console.log('User disconnected');
+  socket.on("disconnect", () => {
+    console.log("User disconnected");
   });
 });
+
 
 
 const PORT = process.env.PORT || 8000;
