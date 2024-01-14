@@ -92,6 +92,7 @@ io.on("connection", (socket) => {
   socket.on("getLatestMessages", async ({ roomIds }) => {
     console.log("Received getLatestMessages event:", { roomIds });
     try {
+      // Loop melalui setiap roomId dan emit latestMessage untuk setiap room
       for (const roomId of roomIds) {
         await emitLatestMessage(roomId);
       }

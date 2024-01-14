@@ -51,12 +51,6 @@ exports.roomList = catchAsyncErrors(async (req, res, next) => {
 
       roomList.push(data);
     }
-
-    for (const roomIds of roomList.roomId) {
-      await emitLatestMessage(roomIds.toString());
-      const _roomIds = roomIds.toString();
-      console.log("roomIds", { _roomIds });
-    }
     resMsg.sendResponse(res, 200, true, "success", roomList);
     // console.log("roomlist = ", _roomList.users);
   } catch (err) {}
