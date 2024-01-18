@@ -10,8 +10,12 @@ const { Op } = require("sequelize");
 const RoomChat = require("../models/chat/roomModel");
 const Message = require("../models/chat/messageModel");
 const emitLatestMessage = require("../index");
+const mongoose = require("mongoose");
 
 exports.roomList = catchAsyncErrors(async (req, res, next) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
     const userId = req.user.id;
 
@@ -21,10 +25,13 @@ exports.roomList = catchAsyncErrors(async (req, res, next) => {
           $or: [{ userId: userId }, { partnerId: userId }],
         },
       },
-    });
+    }).session(session);
 
     if (!_roomList.length) {
-      resMsg.sendResponse(res, 401, true, "no data roomlist");
+      await session.commitTransaction();
+      session.endSession();
+      resMsg.sendResponse(res, 404, true, "no data roomlist");
+      return;
     }
 
     const roomList = [];
@@ -37,7 +44,8 @@ exports.roomList = catchAsyncErrors(async (req, res, next) => {
 
       const latestMessage = await Message.findOne({ room: room._id })
         .sort({ createdAt: -1 })
-        .populate("sender");
+        .populate("sender")
+        .session(session);
 
       const formattedLatestMessage = latestMessage
         ? {
@@ -72,9 +80,12 @@ exports.roomList = catchAsyncErrors(async (req, res, next) => {
 
       roomList.push(data);
     }
+    await session.commitTransaction();
+    session.endSession();
     resMsg.sendResponse(res, 200, true, "success", roomList);
-    // console.log("roomlist = ", _roomList.users);
   } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
     res.status(500).json({ error: err.message });
     return next(new ErrorHandler("Kesalahan Server.", 500));
   }
