@@ -47,7 +47,7 @@ io.on("connection", (socket) => {
         { _id: roomId },
         { $set: { hasUnreadMessages: true } }
       );
-      await emitLatestMessage(roomId);
+      await emitLatestMessage(roomId.toString());
 
       io.to(roomId.toString()).emit("sendMessage", message);
 
@@ -102,33 +102,32 @@ io.on("connection", (socket) => {
   });
 
   async function emitLatestMessage(roomId) {
+    console.log("roomid di function", roomId);
     try {
       const latestMessage = await Message.findOne({ room: roomId })
         .sort({ createdAt: -1 })
         .populate("sender");
 
-      if (latestMessage) {
-        const formattedLatestMessage = {
-          _id: latestMessage._id,
-          room: latestMessage.room,
-          sender: latestMessage.sender,
-          content: latestMessage.content,
-          seen: latestMessage.seen,
-          createdAt: latestMessage.createdAt,
-          // Tambahkan atribut time dengan nilai sesuai kebutuhan
-          time: latestMessage.createdAt.toLocaleTimeString(), // Atau gunakan format waktu yang diinginkan
-        };
+      // if (latestMessage) {
+      const formattedLatestMessage = {
+        _id: latestMessage._id,
+        room: latestMessage.room,
+        sender: latestMessage.sender,
+        content: latestMessage.content,
+        seen: latestMessage.seen,
+        createdAt: latestMessage.createdAt,
+        // Tambahkan atribut time dengan nilai sesuai kebutuhan
+        time: latestMessage.createdAt.toLocaleTimeString(), // Atau gunakan format waktu yang diinginkan
+      };
 
-        io.to(roomId).emit("latestMessage", formattedLatestMessage);
-        console.log("roomId yg didapatkan", roomId);
-        console.log("data", formattedLatestMessage);
-      }
+      io.emit("latestMessage", formattedLatestMessage);
+      console.log("roomId yg didapatkan", roomId);
+      console.log("data", formattedLatestMessage);
+      // }
     } catch (error) {
       console.error("Error emitting latestMessage event:", error);
     }
   }
-
-  module.exports = emitLatestMessage;
 
   async function findOrCreateRoom(userId, partnerId) {
     // Sort userId and partnerId to ensure consistent order

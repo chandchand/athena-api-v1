@@ -41,12 +41,29 @@ exports.roomList = catchAsyncErrors(async (req, res, next) => {
         },
       });
 
+      const latestMessage = await Message.findOne({ room: room._id })
+        .sort({ createdAt: -1 })
+        .populate("sender");
+
+      // if (latestMessage) {
+      // const formattedLatestMessage = {
+      //   _id: latestMessage._id,
+      //   room: latestMessage.room,
+      //   sender: latestMessage.sender,
+      //   content: latestMessage.content,
+      //   seen: latestMessage.seen,
+      //   createdAt: latestMessage.createdAt,
+      //   // Tambahkan atribut time dengan nilai sesuai kebutuhan
+      //   time: latestMessage.createdAt.toLocaleTimeString(), // Atau gunakan format waktu yang diinginkan
+      // };
+
       const data = {
         roomId: room._id,
         userId: userId,
         partnerName: partnerData.User.name,
         partnerUsername: partnerData.username ? partnerData.username : null,
         partnerAvatar: partnerData.avatar ? partnerData.avatar.url : null,
+        latestMessage,
       };
 
       roomList.push(data);
