@@ -23,6 +23,10 @@ exports.roomList = catchAsyncErrors(async (req, res, next) => {
       },
     });
 
+    if (!_roomList.length) {
+      resMsg.sendResponse(res, 401, true, "no data roomlist");
+    }
+
     const roomList = [];
 
     for (const room of _roomList) {
@@ -30,6 +34,22 @@ exports.roomList = catchAsyncErrors(async (req, res, next) => {
       const partnerId = user
         ? user.partnerId
         : room.users.find((user) => user.partnerId === userId).userId;
+
+      const latestMessage = await Message.findOne({ room: room._id })
+        .sort({ createdAt: -1 })
+        .populate("sender");
+
+      const formattedLatestMessage = latestMessage
+        ? {
+            _id: latestMessage._id,
+            room: latestMessage.room,
+            sender: latestMessage.sender,
+            content: latestMessage.content,
+            seen: latestMessage.seen,
+            createdAt: latestMessage.createdAt,
+            time: latestMessage.createdAt.toLocaleTimeString(),
+          }
+        : null;
 
       const partnerData = await Profile.findOne({
         where: {
@@ -40,21 +60,6 @@ exports.roomList = catchAsyncErrors(async (req, res, next) => {
           attributes: ["name", "phone_number"],
         },
       });
-
-      const latestMessage = await Message.findOne({ room: room._id })
-        .sort({ createdAt: -1 })
-        .populate("sender");
-
-      const formattedLatestMessage = {
-        _id: latestMessage._id,
-        room: latestMessage.room,
-        sender: latestMessage.sender,
-        content: latestMessage.content,
-        seen: latestMessage.seen,
-        createdAt: latestMessage.createdAt,
-        // Tambahkan atribut time dengan nilai sesuai kebutuhan
-        time: latestMessage.createdAt.toLocaleTimeString(), // Atau gunakan format waktu yang diinginkan
-      };
 
       const data = {
         roomId: room._id,
@@ -69,5 +74,8 @@ exports.roomList = catchAsyncErrors(async (req, res, next) => {
     }
     resMsg.sendResponse(res, 200, true, "success", roomList);
     // console.log("roomlist = ", _roomList.users);
-  } catch (err) {}
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+    return next(new ErrorHandler("Kesalahan Server.", 500));
+  }
 });
