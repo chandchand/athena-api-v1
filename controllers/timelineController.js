@@ -42,7 +42,7 @@ exports.searchUsers = catchAsyncErrors(async (req, res, next) => {
       const userData = data.map((user) => ({
         id: user.id,
         name: user.name,
-        avatar: user.Profile ? user.Profile.avatar : null, // Check if Profile exists
+        avatar: user.Profile.avatar ? user.Profile.avatar.url : null, // Check if Profile exists
         username: user.Profile ? user.Profile.username : null, // Add "username" attribute if it exists
       }));
 
