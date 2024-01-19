@@ -12,4 +12,8 @@ router
   .route("/roomList")
   .get(isAuthenticated, authorizeRole(isUser), Chat.roomList);
 
+router
+  .route("/followerList")
+  .get(isAuthenticated, authorizeRole(isUser), Chat.getFollowing);
+
 module.exports = router;

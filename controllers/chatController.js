@@ -3,8 +3,9 @@ const ErrorHandler = require("../utils/errorHandlers")
 const { sendOTP } = require('../middlewares/whatsapp');
 const { sendEmail } = require('../middlewares/mailer');
 const db = require ('../models')
-const {Profile, Users} = require("../models")
-const resMsg = require('../utils/resMsg')
+const { Profile, Users, Follows } = require("../models");
+
+const resMsg = require("../utils/resMsg");
 const cloudinary = require("../utils/cloudinary");
 const { Op } = require("sequelize");
 const RoomChat = require("../models/chat/roomModel");
@@ -90,3 +91,51 @@ exports.roomList = catchAsyncErrors(async (req, res, next) => {
     return next(new ErrorHandler("Kesalahan Server.", 500));
   }
 });
+
+exports.getFollowing = catchAsyncErrors(async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+
+    const profile = await Profile.findOne({
+      where: {
+        userId: userId,
+      },
+      include: {
+        model: Users,
+        attributes: ["nim", "name", "phone_number"],
+        include: [
+          {
+            model: Users,
+            as: "following",
+            attributes: ["id", "name"],
+            include: [
+              {
+                model: Profile,
+                as: "profile",
+                attributes: ["avatar", "username"],
+              },
+            ],
+          },
+        ],
+      },
+    });
+
+    if (!profile) {
+      return next(new ErrorHandler("Profile not found.", 404));
+    }
+
+    const data = profile.User.following.map(({ id, name, profile }) => ({
+      id,
+      name,
+      avatar: profile.avatar ? profile.avatar.url : null,
+      username: profile.username ? profile.username : null,
+    }));
+
+    resMsg.sendResponse(res, 200, true, "success", data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+    return next(new ErrorHandler("Server Error.", 500));
+  }
+});
+
+
