@@ -9,6 +9,7 @@ const { Op, Sequelize } = require("sequelize");
 
 exports.searchUsers = catchAsyncErrors(async (req, res, next) => {
   const { keywords } = req.query;
+
   try {
     if (!keywords) {
       resMsg.sendResponse(res, 400, false, `Keywords dipelukan`, null);
@@ -21,6 +22,12 @@ exports.searchUsers = catchAsyncErrors(async (req, res, next) => {
         },
       },
       attributes: ["id", "name"],
+      include: [
+        {
+          model: Profile,
+          attributes: ["avatar", "username"],
+        },
+      ],
     });
 
     if (data.length === 0) {
@@ -32,7 +39,14 @@ exports.searchUsers = catchAsyncErrors(async (req, res, next) => {
         null
       );
     } else {
-      resMsg.sendResponse(res, 200, true, "success", data);
+      const userData = data.map((user) => ({
+        id: user.id,
+        name: user.name,
+        avatar: user.Profile ? user.Profile.avatar : null, // Check if Profile exists
+        username: user.Profile ? user.Profile.username : null, // Add "username" attribute if it exists
+      }));
+
+      resMsg.sendResponse(res, 200, true, "success", userData);
     }
   } catch (err) {
     res.status(500).json({ error: err.message });
