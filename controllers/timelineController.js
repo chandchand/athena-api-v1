@@ -467,6 +467,80 @@ exports.getPosts = catchAsyncErrors(async (req, res, next) => {
   }
 });
 
+exports.getAllPostsById = catchAsyncErrors(async (req, res, next) => {
+  const userId = req.params.id;
+  try {
+    // Pastikan userId memiliki nilai dan userId.id memiliki nilai
+    if (!userId) {
+      return resMsg.sendResponse(res, 400, false, "User ID tidak valid", null);
+    }
+
+    const posts = await Posts.findAll({
+      include: [
+        {
+          model: Users,
+          as: "user",
+          attributes: ["name"],
+          include: [
+            {
+              model: Profile,
+              as: "profile",
+              attributes: ["avatar", "username"],
+            },
+          ],
+        },
+        {
+          model: Likes,
+          as: "likes",
+          attributes: ["userId"],
+        },
+        {
+          model: Comments,
+          as: "comments",
+          attributes: ["userId", "text"],
+          include: [
+            {
+              model: Users,
+              as: "user",
+              attributes: ["id", "name"],
+            },
+          ],
+        },
+      ],
+      where: { userId: userId },
+    });
+
+    // Jika user tidak memiliki postingan
+    if (!posts.length) {
+      return resMsg.sendResponse(res, 200, true, "success", []);
+    }
+
+    const data = posts.map((post) => {
+      const isLiked = post.likes.some((like) => like.userId === userId);
+      const isMy = post.userId === userId;
+      return {
+        id: post.id,
+        userId: post.userId,
+        img: post.img.url,
+        content: post.content,
+        uploadTime: new Date(post.createdAt).getTime(),
+        name: post.user.name,
+        username: post.user.profile.username,
+        avatar: post.user.profile.avatar ? post.user.profile.avatar.url : null,
+        likeCount: post.likes.length,
+        comments: post.comments.length,
+        isLiked: isLiked,
+        isMyPost: isMy,
+      };
+    });
+
+    resMsg.sendResponse(res, 200, true, "success", data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+    return next(new ErrorHandler("Kesalahan Server.", 500));
+  }
+});
+
 exports.getMyPosts = catchAsyncErrors(async (req, res, next) => {
     const userId = req.user.id;
     try {

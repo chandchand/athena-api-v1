@@ -1,16 +1,9 @@
 const catchAsyncErrors = require("../middlewares/catchAsyncError")
-const ErrorHandler = require("../utils/errorHandlers")
-const { sendOTP } = require('../middlewares/whatsapp');
-const { sendEmail } = require('../middlewares/mailer');
-const db = require ('../models')
+const ErrorHandler = require("../utils/errorHandlers");
 const { Profile, Users, Follows } = require("../models");
-
 const resMsg = require("../utils/resMsg");
-const cloudinary = require("../utils/cloudinary");
-const { Op } = require("sequelize");
 const RoomChat = require("../models/chat/roomModel");
 const Message = require("../models/chat/messageModel");
-const emitLatestMessage = require("../index");
 const mongoose = require("mongoose");
 
 exports.roomList = catchAsyncErrors(async (req, res, next) => {
@@ -35,13 +28,15 @@ exports.roomList = catchAsyncErrors(async (req, res, next) => {
       return;
     }
 
-    const roomList = [];
+    const data = [];
 
     for (const room of _roomList) {
       const user = room.users.find((user) => user.userId === userId);
       const partnerId = user
         ? user.partnerId
         : room.users.find((user) => user.partnerId === userId).userId;
+
+      console.log("room id", room._id);
 
       const latestMessage = await Message.findOne({ room: room._id })
         .sort({ createdAt: -1 })
@@ -70,7 +65,7 @@ exports.roomList = catchAsyncErrors(async (req, res, next) => {
         },
       });
 
-      const data = {
+      const roomList = {
         roomId: room._id,
         userId: userId,
         partnerName: partnerData.User.name,
@@ -79,11 +74,11 @@ exports.roomList = catchAsyncErrors(async (req, res, next) => {
         latestMessage: formattedLatestMessage,
       };
 
-      roomList.push(data);
+      data.push(roomList);
     }
     await session.commitTransaction();
     session.endSession();
-    resMsg.sendResponse(res, 200, true, "success", roomList);
+    resMsg.sendResponse(res, 200, true, "success", data);
   } catch (err) {
     await session.abortTransaction();
     session.endSession();

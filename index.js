@@ -82,6 +82,12 @@ io.on("connection", (socket) => {
         userId,
         partnerId
       );
+
+      await Message.updateMany(
+        { room: room.room._id, seen: false, sender: { $ne: userId } },
+        { $set: { seen: true } }
+      );
+      
       io.to(socket.id).emit("messages", allMessages);
       // await emitLatestMessage(room.room._id.toString());
       // console.log("all", allMessages);

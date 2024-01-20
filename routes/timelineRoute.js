@@ -18,6 +18,10 @@ router.route('/posts')
 router.route('/my_posts')
     .get(isAuthenticated, authorizeRole(isUser),Timeline.getMyPosts)
 
+router
+  .route("/user_posts/:id")
+  .get(isAuthenticated, authorizeRole(isUser), Timeline.getAllPostsById);
+
 router.route('/posts/:id')
     .get(isAuthenticated, authorizeRole(isUser),Timeline.getOnePosts)
     .put(isAuthenticated, authorizeRole(isUser), uploads.single('img'),Timeline.editPost)
