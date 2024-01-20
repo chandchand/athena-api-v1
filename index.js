@@ -69,7 +69,6 @@ io.on("connection", (socket) => {
         room.room._id
       );
 
-      // Kirimkan pesan bergabung ke user tersebut saja
       socket.join(room.room._id.toString());
       console.log("roomID joined: ", room.room._id.toString());
 
@@ -84,9 +83,7 @@ io.on("connection", (socket) => {
         { $set: { seen: true } }
       );
       
-      io.to(socket.id).emit("messages", allMessages);
-      // await emitLatestMessage(room.room._id.toString());
-      // console.log("all", allMessages);
+      io.to(room.room._id.toString()).emit("messages", allMessages);
     } catch (error) {
       console.error("Error handling join event:", error);
     }
