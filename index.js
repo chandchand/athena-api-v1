@@ -43,13 +43,9 @@ io.on("connection", (socket) => {
       // Emit the message to all members of the room
 
       await message.save();
-      await RoomChat.updateOne(
-        { _id: roomId },
-        { $set: { hasUnreadMessages: true } }
-      );
       // await emitLatestMessage(roomId.toString());
 
-      io.to(socket.id).emit("latestMessage", message);
+      // io.to(socket.id).emit("latestMessage", message);
       io.to(roomId.toString()).emit("sendMessage", message);
 
       console.log("room id: ", roomId.toString());

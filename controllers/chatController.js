@@ -68,6 +68,7 @@ exports.roomList = catchAsyncErrors(async (req, res, next) => {
       const roomList = {
         roomId: room._id,
         userId: userId,
+        partnerId: partnerId,
         partnerName: partnerData.User.name,
         partnerUsername: partnerData.username ? partnerData.username : null,
         partnerAvatar: partnerData.avatar ? partnerData.avatar.url : null,
