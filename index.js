@@ -168,7 +168,7 @@ connectDB();
 
 db.sequelize
   .sync({
-    force: false,
+    force: true,
     logging: (msg) =>
       console.log(`[${db.sequelize.config.environment}] ${msg}`),
   })
