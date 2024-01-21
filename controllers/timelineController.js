@@ -508,6 +508,7 @@ exports.getAllPostsById = catchAsyncErrors(async (req, res, next) => {
         },
       ],
       where: { userId: userId },
+      order: [["createdAt", "DESC"]],
     });
 
     // Jika user tidak memiliki postingan
@@ -550,38 +551,39 @@ exports.getMyPosts = catchAsyncErrors(async (req, res, next) => {
         }
 
         const posts = await Posts.findAll({
-            include: [
+          include: [
+            {
+              model: Users,
+              as: "user",
+              attributes: ["name"],
+              include: [
                 {
-                    model: Users,
-                    as: 'user',
-                    attributes: ['name',],
-                    include: [
-                        {
-                          model: Profile,
-                          as: 'profile',
-                          attributes: ['avatar','username'],
-                        },
-                    ], 
+                  model: Profile,
+                  as: "profile",
+                  attributes: ["avatar", "username"],
                 },
+              ],
+            },
+            {
+              model: Likes,
+              as: "likes",
+              attributes: ["userId"],
+            },
+            {
+              model: Comments,
+              as: "comments",
+              attributes: ["userId", "text"],
+              include: [
                 {
-                    model: Likes,
-                    as: 'likes',
-                    attributes: ['userId'],
+                  model: Users,
+                  as: "user",
+                  attributes: ["id", "name"],
                 },
-                {
-                    model: Comments,
-                    as: 'comments',
-                    attributes: ['userId', 'text'],
-                    include: [
-                        {
-                            model: Users,
-                            as: 'user',
-                            attributes: ['id', 'name'],
-                        },
-                    ],
-                },
-            ],
-            where: { userId: userId }
+              ],
+            },
+          ],
+          where: { userId: userId },
+          order: [["createdAt", "DESC"]],
         });
 
         // Jika user tidak memiliki postingan
