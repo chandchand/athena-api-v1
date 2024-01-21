@@ -96,15 +96,20 @@ exports.updateBiodata = catchAsyncErrors(async(req, res, next)=>{
     }
 
     try {
-        const data = await Profile.update({
-            username: username,
-            email: email,
-            gender: gender,
-            bio: bio
-          },{
+        const data = await Profile.update(
+          {
+            username: username ? username : " ",
+            email: email ? email : " ",
+            gender: gender ? gender : " ",
+            bio: bio ? bio : " ",
+          },
+          {
             where: {
-            userId: user_id.id}
-          },{new: true});
+              userId: user_id.id,
+            },
+          },
+          { new: true }
+        );
 
         resMsg.sendResponse(res, 200, true, 'success', data);
 
