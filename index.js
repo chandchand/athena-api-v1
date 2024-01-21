@@ -166,12 +166,17 @@ const PORT = process.env.PORT || 8000;
 app.use(morgan('dev'));
 connectDB();
 
-db.sequelize.sync({ force: false, logging: (msg) => console.log(`[${db.sequelize.config.environment}] ${msg}`) })
+db.sequelize
+  .sync({
+    force: true,
+    logging: (msg) =>
+      console.log(`[${db.sequelize.config.environment}] ${msg}`),
+  })
   .then(() => {
-    console.log('Database synced successfully.');
+    console.log("Database synced successfully.");
   })
   .catch((error) => {
-    console.error('Error syncing database:', error);
+    console.error("Error syncing database:", error);
   });
 
 app.use(bodyParser.urlencoded({ extended: false }));
